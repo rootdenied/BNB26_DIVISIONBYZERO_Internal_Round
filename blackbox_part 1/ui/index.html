@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Black Box</title>
+<style>
+:root{
+  --bg:#0d0d0e; --panel:#161618; --panel2:#1d1d20; --hover:#222226; --line:#2a2a2e; --line2:#37373c;
+  --text:#ededee; --text2:#b9b9be; --muted:#85858c;
+  --accent:#3987e5; --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s0:#6b6b72;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font:13px/1.45 Inter,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+::-webkit-scrollbar{width:10px;height:10px}::-webkit-scrollbar-thumb{background:#2d2d32;border-radius:6px;border:2px solid var(--panel)}
+::-webkit-scrollbar-track{background:transparent}
+#app{display:flex;height:100vh;gap:8px;padding:8px}
+.rail{width:158px;flex:none;display:flex;flex-direction:column;gap:2px;padding:6px}
+.brand{display:flex;align-items:center;gap:9px;padding:10px 10px 14px;font-weight:700;font-size:14px;letter-spacing:.2px}
+.brand i{flex:none;width:20px;height:20px;border-radius:5px;background:#000;border:1.5px solid var(--text);display:block;position:relative}
+.brand i:after{content:"";position:absolute;inset:5px;border-radius:50%;background:var(--crit)}
+.brand small{display:block;font-weight:400;color:var(--muted);font-size:10.5px;letter-spacing:0}
+.nav{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;color:var(--text2);border:0;background:none;text-align:left;width:100%}
+.nav:hover{background:var(--panel);color:var(--text)}
+.nav.on{background:var(--panel2);color:var(--text);font-weight:600}
+.nav svg{width:16px;height:16px;flex:none;stroke:currentColor;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.rail .grow{flex:1}
+.primary{background:#1f7a52;border:1px solid #2a9a69;color:#fff;font-weight:650;border-radius:8px;padding:9px 12px}
+.primary:hover{background:#249062}
+.primary:disabled{opacity:.55;cursor:default}
+.svc{padding:10px;color:var(--muted);font-size:11.5px;display:grid;gap:5px}
+.svc b{color:var(--text2);font-weight:500}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;background:var(--muted)}
+.dot.up{background:var(--good)} .dot.down{background:var(--serious)}
+.side{width:262px;flex:none;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;overflow:auto}
+.search{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:7px 10px;outline:none}
+.search:focus,.inp:focus{border-color:var(--accent)}
+.side h4{margin:18px 6px 6px;font-size:10.5px;letter-spacing:.9px;color:var(--muted);font-weight:650;text-transform:uppercase}
+.chan{display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;padding:6px 8px;border-radius:7px;color:var(--text2);text-align:left}
+.chan:hover{background:var(--hover);color:var(--text)}
+.chan.on{background:#000;color:var(--text);font-weight:600}
+.chan .h{color:var(--muted);width:12px;text-align:center;flex:none}
+.chan .sw{width:10px;height:10px;border-radius:3px;flex:none}
+.chan .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cnt{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cnt.red{background:var(--crit);color:#fff;border-radius:9px;padding:0 7px;font-weight:650}
+.main{flex:1;min-width:0;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+.top{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line);flex:none}
+.top h1{font-size:16px;margin:0;font-weight:650;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inp,select.inp{background:var(--bg);border:1px solid var(--line2);border-radius:7px;padding:6px 9px;outline:none}
+textarea.inp{width:100%;font-family:var(--mono);font-size:12px;resize:vertical}
+.btn{background:var(--panel2);border:1px solid var(--line2);border-radius:7px;padding:6px 11px;color:var(--text)}
+.btn:hover{background:var(--hover)} .btn.sm{padding:3px 9px;font-size:12px}
+.split{flex:1;display:flex;min-height:0}
+.col{overflow:auto;min-width:0}
+.threads{flex:1.35;border-right:1px solid var(--line)}
+.over{flex:1;padding:0 16px 20px}
+.sub{position:sticky;top:0;z-index:2;background:var(--panel);display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);font-weight:650}
+.sub .sp{flex:1}.sub label,.sub select{font-weight:400;font-size:12px;color:var(--text2)}
+.thr{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:12px 16px;color:var(--text)}
+.thr:hover{background:var(--hover)}
+.thr .l1{display:flex;align-items:center;gap:9px;color:var(--muted);font-size:12px;flex-wrap:wrap}
+.thr .t{font-weight:650;font-size:13.5px;margin:5px 0 3px}
+.thr .sum{color:var(--text2);margin:3px 0}
+.thr .l3{display:flex;align-items:center;gap:14px;color:var(--muted);font-size:12px;margin-top:6px;flex-wrap:wrap}
+.badge{font-size:10.5px;font-weight:700;border-radius:9px;padding:1px 8px;border:1px solid;letter-spacing:.3px;white-space:nowrap}
+.badge.fail{color:#ff8f8f;border-color:#7a2626;background:#3a1414}
+.badge.ok{color:#7fdc7f;border-color:#1d5c1d;background:#102b10}
+.st{display:inline-flex;align-items:center;gap:6px;color:var(--text2)}
+.st i{width:13px;height:13px;border-radius:50%;display:inline-grid;place-items:center;font-style:normal;font-size:9px;font-weight:800;color:#0d0d0e}
+.st.good i{background:var(--good)} .st.warn i{background:var(--warn)} .st.open i{background:var(--serious)} .st.info i{background:var(--accent)}
+.chip{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;margin:0 4px 3px 0;background:#2a2a2f;color:var(--text2);white-space:nowrap}
+.chip.err{background:#4a1b1b;color:#ffb0b0}.chip.sus{background:#4a3410;color:#ffd58a}.chip.edit{background:#16365f;color:#a9cdfb}
+.chip.reused{background:#143a22;color:#9be0b1}.chip.rerun{background:#4a3410;color:#ffd58a}.chip.edited{background:#16365f;color:#a9cdfb}
+.more{display:block;margin:14px auto;}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+/* overview */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:14px 0 4px}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;min-width:0}
+.tile .k{color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile .v{font-size:19px;font-weight:650;margin-top:2px;font-variant-numeric:tabular-nums;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tile .v small{font-size:12px;color:var(--muted);font-weight:400}
+.chart{border-top:1px solid var(--line);margin:14px -16px 0;padding:14px 16px 0}
+.chart:first-of-type{border-top:0}
+.chart h3{margin:0 0 2px;font-size:13px;font-weight:650}
+.chart p{margin:0 0 6px;color:var(--muted);font-size:11.5px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11.5px;color:var(--text2);margin-bottom:4px}
+.legend span:before{content:"";display:inline-block;width:9px;height:9px;border-radius:2px;background:var(--c);margin-right:5px}
+svg text{fill:var(--muted);font-size:10.5px;font-family:inherit}
+#tip{position:fixed;z-index:50;pointer-events:none;background:#000;border:1px solid var(--line2);border-radius:7px;padding:7px 10px;font-size:12px;display:none;max-width:260px;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+#tip b{display:block;margin-bottom:3px}#tip div{display:flex;gap:12px;justify-content:space-between;color:var(--text2)}
+#tip div span:first-child:before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--c);margin-right:6px}
+/* detail */
+.page{flex:1;overflow:auto;padding:16px}
+.dgrid{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:16px;align-items:start}
+.card{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px}
+.card h3{margin:0 0 8px;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.card h3 .sp{flex:1}
+.cap{color:var(--muted);font-size:12px;margin:4px 0}
+.step{border:1px solid var(--line2);border-radius:9px;padding:8px 11px;margin-bottom:7px;cursor:pointer;background:var(--panel)}
+.step:hover{border-color:#55555c}
+.step.sus{border-color:#b9731a;background:#241a0c}
+.step.sus2{border-color:#6b4a1c;border-style:dashed}
+.step.sel{box-shadow:0 0 0 2px var(--accent)}
+.step .hd{display:flex;gap:8px;align-items:baseline;margin-bottom:4px}
+.step .hd b{font-size:13px}.step .hd .dep{color:var(--muted);font-size:11.5px}.step .hd .x{margin-left:auto;color:var(--muted);font-size:11.5px}
+.mono{font-family:var(--mono);font-size:12px;white-space:pre-wrap;word-break:break-word;color:var(--text2)}
+.io{margin-top:8px;border-top:1px dashed var(--line2);padding-top:8px}
+.io h5{margin:6px 0 3px;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.io .mono{background:#0b0b0c;border-radius:6px;padding:8px;max-height:260px;overflow:auto}
+.susrow{border:1px solid var(--line2);border-radius:8px;padding:8px 10px;margin-bottom:7px;cursor:pointer;background:var(--panel)}
+.susrow:hover{border-color:#55555c}
+.bar{height:6px;border-radius:3px;background:#2c2c31;margin:6px 0;overflow:hidden}.bar i{display:block;height:100%;background:var(--serious);border-radius:3px}
+.bar.g i{background:var(--good)}
+.seg{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0}
+.seg button{background:var(--panel);border:1px solid var(--line2);border-radius:7px;padding:5px 10px;color:var(--text2)}
+.seg button.on{background:#16365f;border-color:#2f6ab8;color:#fff}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}
+.note{border-radius:8px;padding:8px 11px;margin:8px 0;font-size:12.5px}
+.note.ok{background:#102b10;border:1px solid #1d5c1d;color:#a8e6a8}.note.bad{background:#3a1414;border:1px solid #7a2626;color:#ffb5b5}
+.note.warn{background:#3a2c0c;border:1px solid #7a5c14;color:#ffdf9a}
+details summary{cursor:pointer;color:var(--text2);font-size:12px}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:7px}
+.cmp .step{cursor:default;margin:0}
+.cmp .changed{border-left:4px solid var(--warn)}.cmp .added{border-left:4px solid var(--good)}.cmp .removed{border-left:4px solid var(--crit)}.cmp .same{opacity:.6}
+.del{background:rgba(208,59,59,.35);text-decoration:line-through}.ins{background:rgba(12,163,12,.35)}
+.mtiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+/* results */
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-weight:600;font-size:11.5px}
+td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+.tw{overflow:auto}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;place-items:center;z-index:40}
+.modal.on{display:grid}
+.modal .box{width:520px;max-width:92vw;background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:18px}
+.modal label{display:block;color:var(--text2);font-size:12px;margin:10px 0 4px}
+.modal .inp{width:100%}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line2);border-top-color:var(--text);border-radius:50%;animation:r .7s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
+@media (max-width:1150px){.side{display:none}.dgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="app">
+  <nav class="rail">
+    <div class="brand"><i></i><div>Black Box<small>agent flight recorder</small></div></div>
+    <button class="nav" data-go="#/"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Activity</button>
+    <button class="nav" data-go="#/results"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Results</button>
+    <button class="nav" data-go="#/custom"><svg viewBox="0 0 24 24"><path d="M4 6h10M18 6h2M4 12h3M11 12h9M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="18" cy="18" r="2"/></svg>Custom</button>
+    <div class="grow"></div>
+    <div class="svc" id="svc"></div>
+    <button class="primary" id="recBtn">+ Record a run</button>
+  </nav>
+  <aside class="side" id="side"></aside>
+  <main class="main" id="main"></main>
+</div>
+<div id="tip"></div>
+<div class="modal" id="modal"><div class="box" id="modalBox"></div></div>
+<script>
+"use strict";
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const short = (t, n = 110) => { t = String(t ?? "").replace(/\n/g, " ⏎ "); return t.length <= n ? t : t.slice(0, n) + "…"; };
+const fmtN = n => n >= 10000 ? (n / 1000).toFixed(0) + "k" : n >= 1000 ? (n / 1000).toFixed(1) + "k" : String(n);
+const pct = (a, b) => b ? Math.round(100 * a / b) + "%" : "–";
+const fmtTime = iso => iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+const chip = (t, c = "") => `<span class="chip ${c}">${esc(t)}</span>`;
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  if (!r.ok) { let m = r.statusText; try { const j = await r.json(); m = typeof j.detail === "string" ? j.detail : JSON.stringify(j.detail); } catch (e) {} throw new Error(m); }
+  return r.json();
+}
+
+const S = { runs: [], replays: [], meta: null, diag: {}, limit: 60, sort: "new", lookback: "all",
+            f: { q: "", outcome: null, status: null, fault: null, model: null, framework: null } };
+const LOOKBACK = { all: ["All time", Infinity], "24h": ["Last 24 hours", 864e5], "6h": ["Last 6 hours", 216e5], "1h": ["Last hour", 36e5] };
+const NOFAULT = "no injected fault";
+const faultColor = f => { const i = S.meta.fault_types.indexOf(f); return i < 0 ? "var(--s0)" : `var(--s${i + 1})`; };
+
+function runStatus(r) {
+  if (r.outcome === "success") return { key: "ok", cls: "good", icon: "✓", text: "Succeeded" };
+  if (r.confirmed) return { key: "confirmed", cls: "good", icon: "✓", text: "Cause confirmed and saved" };
+  if (r.n_replays_ok > 0) return { key: "fixed", cls: "good", icon: "✓", text: "Fixed by replay" };
+  if (r.n_replays > 0) return { key: "open", cls: "warn", icon: "!", text: "Replayed, still failing" };
+  return { key: "open", cls: "open", icon: "!", text: "Open" };
+}
+function inLookback() {
+  const span = LOOKBACK[S.lookback][1], now = Date.now();
+  return S.runs.filter(r => span === Infinity || now - new Date(r.created_at) <= span);
+}
+function filtered() {
+  const f = S.f, q = f.q.trim().toLowerCase();
+  return inLookback().filter(r =>
+    (!f.outcome || r.outcome === f.outcome) && (!f.status || runStatus(r).key === f.status) &&
+    (!f.fault || (r.fault_type || NOFAULT) === f.fault) && (!f.model || r.model === f.model) &&
+    (!f.framework || r.framework === f.framework) &&
+    (!q || `${r.run_id} ${r.task} ${r.model} ${r.fault_type || ""} ${r.framework}`.toLowerCase().includes(q)));
+}
+
+/* ------------------------------------------------------------ sidebar */
+function renderSide() {
+  const base = inLookback(), count = (fn) => base.filter(fn).length, f = S.f;
+  const row = (group, val, label, n, lead, red) =>
+    `<button class="chan ${f[group] === val ? "on" : ""}" data-g="${group}" data-v="${esc(val ?? "")}">${lead}<span class="nm">${esc(label)}</span><span class="cnt ${red ? "red" : ""}">${n}</span></button>`;
+  const hash = '<span class="h">#</span>', uniq = k => [...new Set(base.map(r => r[k]))].sort();
+  const open = count(r => runStatus(r).key === "open");
+  let h = `<input class="search" id="q" placeholder="Search runs, tasks, models" value="${esc(f.q)}">
+    <div style="height:10px"></div>` + row("status", "open", "Open failures", open, '<span class="h">!</span>', open > 0) +
+    `<h4>Outcome</h4>` + row("outcome", null, "all-runs", base.length, hash) + row("outcome", "fail", "failed", count(r => r.outcome === "fail"), hash) +
+    row("outcome", "success", "succeeded", count(r => r.outcome === "success"), hash) +
+    `<h4>Status</h4>` + row("status", "fixed", "fixed-by-replay", count(r => runStatus(r).key === "fixed"), hash) +
+    row("status", "confirmed", "cause-confirmed", count(r => runStatus(r).key === "confirmed"), hash) +
+    `<h4>Injected fault</h4>`;
+  for (const t of [...S.meta.fault_types, NOFAULT])
+    h += row("fault", t, t, count(r => (r.fault_type || NOFAULT) === t), `<span class="sw" style="background:${faultColor(t)}"></span>`);
+  h += `<h4>Models</h4>` + uniq("model").map(m => row("model", m, m, count(r => r.model === m), hash)).join("");
+  h += `<h4>Framework</h4>` + uniq("framework").map(m => row("framework", m, m, count(r => r.framework === m), hash)).join("");
+  const side = $("#side"), keep = document.activeElement && document.activeElement.id === "q", pos = keep && $("#q").selectionStart;
+  side.innerHTML = h;
+  if (keep) { $("#q").focus(); $("#q").setSelectionRange(pos, pos); }
+  $("#q").oninput = e => { S.f.q = e.target.value; S.limit = 60; renderThreads(); renderOverview(); };
+  $$(".chan", side).forEach(b => b.onclick = () => {
+    const g = b.dataset.g, v = b.dataset.v || null;
+    S.f[g] = S.f[g] === v ? null : v; S.limit = 60;
+    if (location.hash.replace(/^#\/?/, "")) location.hash = "#/"; else renderActivity();
+  });
+}
+
+/* ------------------------------------------------------------ activity */
+function renderActivity() {
+  renderSide();
+  $("#main").innerHTML = `<div class="top"><h1>Activity</h1><span class="cap">Lookback</span>
+      <select class="inp" id="lb">${Object.entries(LOOKBACK).map(([k, v]) => `<option value="${k}" ${k === S.lookback ? "selected" : ""}>${v[0]}</option>`).join("")}</select></div>
+    <div class="split"><div class="col threads"><div class="sub">Runs <span class="cnt" id="tcount"></span><span class="sp"></span>
+        <label>Sort</label><select class="inp" id="sort">
+          <option value="new">Newest</option><option value="old">Oldest</option><option value="tok">Most tokens</option><option value="steps">Most steps</option><option value="rep">Most replays</option></select></div>
+        <div id="tlist"></div></div>
+      <div class="col over"><div class="sub" style="margin:0 -16px">Overview <span class="sp"></span><span class="cap" id="ocap"></span></div><div id="ov"></div></div></div>`;
+  $("#sort").value = S.sort;
+  $("#sort").onchange = e => { S.sort = e.target.value; renderThreads(); };
+  $("#lb").onchange = e => { S.lookback = e.target.value; S.limit = 60; renderActivity(); };
+  renderThreads(); renderOverview();
+}
+
+const SORTS = { new: (a, b) => (b.created_at || "").localeCompare(a.created_at || "") || b.run_id.localeCompare(a.run_id),
+  old: (a, b) => (a.created_at || "").localeCompare(b.created_at || "") || a.run_id.localeCompare(b.run_id),
+  tok: (a, b) => b.tokens - a.tokens, steps: (a, b) => b.n_steps - a.n_steps, rep: (a, b) => b.n_replays - a.n_replays };
+let io = null;
+function diagLine(d) {
+  const s = d.suspects[0];
+  if (!s) return "No suspect returned";
+  return `Top suspect: <b>step ${s.step_no}</b> · ${esc(s.actor || "")} · ${Math.round(s.confidence * 100)}% &nbsp;` +
+    s.evidence.slice(0, 3).map(e => chip(e.replace(/_/g, " "))).join("") + (d.mock ? chip("built-in mock", "sus") : "");
+}
+function renderThreads() {
+  const el = $("#tlist"); if (!el) return;
+  const all = filtered().sort(SORTS[S.sort]), list = all.slice(0, S.limit);
+  $("#tcount").textContent = all.length;
+  if (!all.length) { el.innerHTML = `<div class="empty">No runs match. Clear a filter, or record a run.</div>`; return; }
+  el.innerHTML = list.map(r => {
+    const st = runStatus(r), fail = r.outcome === "fail";
+    const sum = fail ? `<div class="sum" data-diag="${r.run_id}">${S.diag[r.run_id] ? diagLine(S.diag[r.run_id]) : '<span class="cap">Diagnosing…</span>'}</div>`
+                     : `<div class="sum">${esc(short(r.final_answer || "", 120))}</div>`;
+    return `<button class="thr" data-id="${r.run_id}"><div class="l1"><span class="badge ${fail ? "fail" : "ok"}">${fail ? "FAIL" : "OK"}</span>
+        <span># ${esc(r.fault_type || NOFAULT)}</span><span>${esc(r.run_id)}</span><span>${fmtTime(r.created_at)}</span>
+        <span style="margin-left:auto">${esc(r.model)} · ${esc(r.framework)}</span></div>
+      <div class="t">${esc(r.task)}</div>${sum}
+      <div class="l3"><span class="st ${st.cls}"><i>${st.icon}</i>${st.text}</span>
+        <span>${r.n_replays} ${r.n_replays === 1 ? "replay" : "replays"}</span><span>${r.n_steps} ${r.n_steps === 1 ? "step" : "steps"}</span><span>${fmtN(r.tokens)} tokens</span>
+        ${r.n_errors ? `<span>${r.n_errors} step ${r.n_errors === 1 ? "error" : "errors"}</span>` : ""}</div></button>`;
+  }).join("") + (all.length > list.length ? `<button class="btn more" id="more">Show more (${all.length - list.length} left)</button>` : "");
+  $$(".thr", el).forEach(b => b.onclick = () => location.hash = "#/run/" + b.dataset.id);
+  if ($("#more")) $("#more").onclick = () => { S.limit += 60; renderThreads(); };
+  if (io) io.disconnect();
+  io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    io.unobserve(e.target);
+    const id = e.target.dataset.diag;
+    if (S.diag[id]) return;
+    api(`/api/runs/${id}/diagnosis`).then(d => { S.diag[id] = d; e.target.innerHTML = diagLine(d); })
+      .catch(() => { e.target.innerHTML = '<span class="cap">Diagnosis unavailable</span>'; });
+  }), { root: el.parentElement, rootMargin: "200px" });
+  $$("[data-diag]", el).forEach(n => io.observe(n));
+}
+
+/* ------------------------------------------------------------ charts */
+const tip = $("#tip");
+function showTip(ev, html) {
+  tip.innerHTML = html; tip.style.display = "block";
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = Math.min(ev.clientX + 14, innerWidth - w - 8) + "px";
+  tip.style.top = Math.max(8, ev.clientY - h - 12) + "px";
+}
+const hideTip = () => tip.style.display = "none";
+function makeBuckets(times) {
+  if (!times.length) return null;
+  const lo = Math.min(...times), hi = Math.max(...times), M = 6e4;
+  const size = [5 * M, 10 * M, 15 * M, 30 * M, 60 * M, 120 * M, 180 * M, 360 * M, 720 * M, 1440 * M, 7 * 1440 * M].find(s => (hi - lo) / s <= 15) || 30 * 1440 * M;
+  const off = new Date(lo).getTimezoneOffset() * M, start = Math.floor((lo - off) / size) * size + off, n = Math.floor((hi - start) / size) + 1;
+  const day = size >= 1440 * M;
+  return { n, idx: t => Math.floor((t - start) / size),
+    label: i => new Date(start + i * size).toLocaleString([], day ? { month: "short", day: "numeric" } : { hour: "numeric", minute: "2-digit" }),
+    full: i => new Date(start + i * size).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + (day ? "" : " – " + new Date(start + (i + 1) * size).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })) };
+}
+const niceMax = v => { if (v <= 4) return 4; const p = Math.pow(10, Math.floor(Math.log10(v))); return [1, 2, 4, 6, 8, 10].map(m => m * p).find(m => m >= v); };
+function frame(el, B, max, unit, H = 150) {
+  const W = Math.max(260, el.clientWidth), m = { l: 34, r: 6, t: 8, b: 20 }, pw = W - m.l - m.r, ph = H - m.t - m.b, slot = pw / B.n;
+  const y = v => m.t + ph - ph * v / max;
+  let g = "";
+  for (const v of [0, max / 2, max]) g += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="#2a2a2e" ${v ? 'stroke-dasharray="2 3"' : ""}/><text x="${m.l - 6}" y="${y(v) + 3.5}" text-anchor="end">${v}${unit}</text>`;
+  const every = Math.ceil(B.n / Math.max(1, Math.floor(pw / 70)));
+  for (let i = 0; i < B.n; i += every) g += `<text x="${m.l + slot * (i + .5)}" y="${H - 5}" text-anchor="middle">${esc(B.label(i))}</text>`;
+  return { W, H, m, ph, slot, y, g, x: i => m.l + slot * (i + .5) };
+}
+function hoverCols(el, F, B, tipFor) {
+  $$("rect.hit", el).forEach(r => { const i = +r.dataset.i;
+    r.onmousemove = ev => { const h = tipFor(i); if (h) { showTip(ev, h); r.setAttribute("fill", "rgba(255,255,255,.05)"); } };
+    r.onmouseleave = () => { hideTip(); r.setAttribute("fill", "transparent"); }; });
+}
+const hits = (F, B) => Array.from({ length: B.n }, (_, i) => `<rect class="hit" data-i="${i}" x="${F.m.l + F.slot * i}" y="${F.m.t}" width="${F.slot}" height="${F.ph}" fill="transparent"/>`).join("");
+function stackedBars(el, B, series, data) {
+  const tot = data.map(d => series.reduce((a, s) => a + (d[s.key] || 0), 0)), F = frame(el, B, niceMax(Math.max(...tot, 1)), "");
+  const bw = Math.max(3, Math.min(26, F.slot - 4));
+  let g = F.g;
+  data.forEach((d, i) => { let acc = 0;
+    series.forEach(s => { const v = d[s.key] || 0; if (!v) return;
+      const y1 = F.y(acc + v), h = F.y(acc) - y1; acc += v;
+      g += `<rect x="${F.x(i) - bw / 2}" y="${y1}" width="${bw}" height="${Math.max(1, h - (h > 4 ? 2 : 0))}" rx="1.5" fill="${s.color}"/>`; }); });
+  el.innerHTML = `<svg width="${F.W}" height="${F.H}" role="img">${g}${hits(F, B)}</svg>`;
+  hoverCols(el, F, B, i => tot[i] ? `<b>${esc(B.full(i))}</b>` + series.filter(s => data[i][s.key]).map(s => `<div style="--c:${s.color}"><span>${esc(s.label)}</span><span>${data[i][s.key]}</span></div>`).join("") + `<div style="--c:transparent"><span>Total</span><span>${tot[i]}</span></div>` : "");
+}
+function lineChart(el, B, pts, color, label) {
+  const F = frame(el, B, 100, "%");
+  let g = F.g, seg = [], paths = "", dots = "";
+  const flush = () => { if (seg.length) {
+      const d = seg.map((p, k) => `${k ? "L" : "M"}${p[0]},${p[1]}`).join("");
+      paths += `<path d="${d}L${seg[seg.length - 1][0]},${F.y(0)}L${seg[0][0]},${F.y(0)}Z" fill="${color}" opacity=".14"/><path d="${d}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`; }
+    seg = []; };
+  pts.forEach((p, i) => { if (!p) return flush(); const xy = [F.x(i), F.y(p.v)]; seg.push(xy); dots += `<circle cx="${xy[0]}" cy="${xy[1]}" r="3.5" fill="${color}" stroke="#161618" stroke-width="2"/>`; });
+  flush();
+  el.innerHTML = `<svg width="${F.W}" height="${F.H}" role="img">${g}${paths}${dots}${hits(F, B)}</svg>`;
+  hoverCols(el, F, B, i => pts[i] ? `<b>${esc(B.full(i))}</b><div style="--c:${color}"><span>${esc(label)}</span><span>${pts[i].v.toFixed(0)}%</span></div><div style="--c:transparent"><span>Replays</span><span>${pts[i].n}</span></div>` : "");
+}
+
+function renderOverview() {
+  const el = $("#ov"); if (!el) return;
+  const runs = filtered(), ids = new Set(runs.map(r => r.run_id)), reps = S.replays.filter(p => ids.has(p.parent));
+  const fails = runs.filter(r => r.outcome === "fail"), fixed = fails.filter(r => r.n_replays_ok > 0 || r.confirmed);
+  const fixReps = reps.filter(p => p.parent_outcome === "fail");
+  const avgSaved = reps.length ? reps.reduce((a, p) => a + p.tokens_saved_pct, 0) / reps.length : null;
+  $("#ocap").textContent = `${runs.length} runs · ${reps.length} replays`;
+  if (!runs.length) { el.innerHTML = `<div class="empty">Nothing to chart for this filter.</div>`; return; }
+  const B = makeBuckets([...runs, ...reps].map(x => +new Date(x.created_at)).filter(t => !isNaN(t)));
+  const faults = [...S.meta.fault_types, NOFAULT];
+  el.innerHTML = `<div class="tiles">
+      <div class="tile"><div class="k">Runs</div><div class="v">${runs.length}</div></div>
+      <div class="tile"><div class="k">Failed</div><div class="v">${fails.length} <small>${pct(fails.length, runs.length)}</small></div></div>
+      <div class="tile"><div class="k">Fixed by replay</div><div class="v">${fixed.length} <small>of ${fails.length}</small></div></div>
+      <div class="tile"><div class="k" title="Average share of tokens a replay did not have to spend again">Tokens saved</div><div class="v">${avgSaved == null ? "–" : avgSaved.toFixed(0) + "%"}</div></div></div>
+    <div class="chart"><h3>Runs by outcome</h3><div class="legend"><span style="--c:var(--crit)">Failed</span><span style="--c:var(--good)">Succeeded</span></div><div id="c1"></div></div>
+    <div class="chart"><h3>Failed runs by injected fault</h3><div class="legend">${faults.map(f => `<span style="--c:${faultColor(f)}">${esc(f)}</span>`).join("")}</div><div id="c2"></div></div>
+    <div class="chart"><h3>Tokens saved by smart replay</h3><p>Share of a replay's tokens that came from reused steps instead of being rerun.</p><div id="c3"></div></div>
+    <div class="chart"><h3>Replays that fixed the failure</h3><p>Share of replays of failed runs that ended in success.</p><div id="c4"></div></div>`;
+  if (!B) return;
+  const mk = () => Array.from({ length: B.n }, () => ({}));
+  const d1 = mk(), d2 = mk(), sv = mk(), fx = mk(), bump = (o, k, v = 1) => o[k] = (o[k] || 0) + v;
+  runs.forEach(r => { const i = B.idx(+new Date(r.created_at)); if (!d1[i]) return; bump(d1[i], r.outcome); if (r.outcome === "fail") bump(d2[i], r.fault_type || NOFAULT); });
+  reps.forEach(p => { const i = B.idx(+new Date(p.created_at)); if (!sv[i]) return; bump(sv[i], "n"); bump(sv[i], "s", p.tokens_saved_pct);
+    if (p.parent_outcome === "fail") { bump(fx[i], "n"); bump(fx[i], "s", p.outcome === "success" ? 100 : 0); } });
+  stackedBars($("#c1"), B, [{ key: "fail", label: "Failed", color: "var(--crit)" }, { key: "success", label: "Succeeded", color: "var(--good)" }], d1);
+  stackedBars($("#c2"), B, faults.map(f => ({ key: f, label: f, color: faultColor(f) })), d2);
+  const toPts = a => a.map(o => o.n ? { v: o.s / o.n, n: o.n } : null);
+  reps.length ? lineChart($("#c3"), B, toPts(sv), "var(--s1)", "Tokens saved") : $("#c3").innerHTML = `<div class="empty">No replays yet for these runs.</div>`;
+  fixReps.length ? lineChart($("#c4"), B, toPts(fx), "var(--s3)", "Fixed") : $("#c4").innerHTML = `<div class="empty">No replays of failed runs yet.</div>`;
+}
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(renderOverview, 150); });
+
+/* ------------------------------------------------------------ run detail */
+let D = null;
+const MODES = [["output", "Edit output"], ["input", "Edit input"], ["rerun", "Retry as-is"], ["branch", "Branch from here"]];
+function wdiff(a, b, limit = 600) {
+  const A = (a || "").slice(0, limit).match(/\s+|\S+/g) || [], Bt = (b || "").slice(0, limit).match(/\s+|\S+/g) || [];
+  const n = A.length, m = Bt.length, w = m + 1, dp = new Uint16Array((n + 1) * w);
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--)
+    dp[i * w + j] = A[i] === Bt[j] ? dp[(i + 1) * w + j + 1] + 1 : Math.max(dp[(i + 1) * w + j], dp[i * w + j + 1]);
+  let i = 0, j = 0, L = "", R = "";
+  while (i < n || j < m) {
+    if (i < n && j < m && A[i] === Bt[j]) { L += esc(A[i]); R += esc(Bt[j]); i++; j++; }
+    else if (j < m && (i === n || dp[i * w + j + 1] >= dp[(i + 1) * w + j])) R += `<span class="ins">${esc(Bt[j++])}</span>`;
+    else L += `<span class="del">${esc(A[i++])}</span>`;
+  }
+  return [L || "∅ (empty)", R || "∅ (empty)"];
+}
+async function openRun(id) {
+  $("#main").innerHTML = `<div class="empty"><span class="spin"></span>Loading ${esc(id)}…</div>`;
+  let info;
+  try { info = await api(`/api/runs/${id}`); } catch (e) { $("#main").innerHTML = `<div class="empty">${esc(e.message)} · <a href="#/" style="color:var(--accent)">Back to activity</a></div>`; return; }
+  const run = info.run;
+  D = { id, run, expected: info.expected, replays: info.replays, confirmed: info.confirmed, diag: S.diag[id] || null, sel: null, picked: false, rw: null,
+        mode: "output", vals: {}, open: new Set(), result: null, explain: null, nruns: 3, onlyDiff: false, busy: false };
+  const fail = run.outcome === "fail", tok = run.steps.reduce((a, s) => a + s.tokens, 0);
+  $("#main").innerHTML = `<div class="top"><button class="btn" onclick="location.hash='#/'">← Activity</button>
+      <h1>${esc(run.run_id)}: ${esc(run.task)}</h1><span class="badge ${fail ? "fail" : "ok"}">${fail ? "FAIL" : "OK"}</span></div>
+    <div class="page"><div class="mtiles">
+        <div class="tile"><div class="k">Final answer</div><div class="v" title="${esc(run.final_answer || "")}">${esc((run.final_answer || "?").replace(/^Final answer:\s*/, ""))}</div></div>
+        <div class="tile"><div class="k">Expected</div><div class="v">${esc(info.expected ?? "?")}</div></div>
+        <div class="tile"><div class="k">Steps</div><div class="v">${run.steps.length}</div></div>
+        <div class="tile"><div class="k">Tokens</div><div class="v">${tok.toLocaleString()}</div></div>
+        <div class="tile"><div class="k">Model</div><div class="v" title="${esc(run.model)}">${esc(run.model)}</div></div>
+        <div class="tile"><div class="k">Framework</div><div class="v">${esc(run.framework)}</div></div></div>
+      ${run.fault ? `<div class="cap" style="margin:-4px 0 12px">Injected fault (the label, hidden from the diagnosis): ${chip(run.fault.type)} at step ${run.fault.step_no ?? run.faulty_step}</div>` : ""}
+      <div class="dgrid"><div><div class="card"><h3>Step timeline <span class="sp"></span><span class="cap">click a step to pick it for editing</span></h3><div id="d-tl"></div></div></div>
+        <div><div class="card" id="d-sus"></div><div class="card" id="d-why"></div><div class="card" id="d-edit"></div><div class="card" id="d-past"></div></div></div>
+      <div id="d-res"></div></div>`;
+  D.sel = D.diag && D.diag.suspects[0] ? D.diag.suspects[0].step_no : run.steps[0].step_no;
+  renderSuspects(); renderWhy(); renderPast(); await pickStep(D.sel, false);
+  if (!D.diag) loadDiag(false);
+}
+async function loadDiag(refresh) {
+  const id = D.id;
+  try { const d = await api(`/api/runs/${id}/diagnosis${refresh ? "?refresh=true" : ""}`); S.diag[id] = d; if (!D || D.id !== id) return; D.diag = d; }
+  catch (e) { if (D && D.id === id) D.diag = { suspects: [], source: "unavailable: " + e.message }; }
+  renderSuspects();
+  if (!D.picked && D.diag.suspects[0]) await pickStep(D.diag.suspects[0].step_no, false); else renderTimeline();
+}
+async function pickStep(n, user = true) {
+  const id = D.id; D.sel = n; if (user) D.picked = true;
+  try { D.rw = await api(`/api/runs/${id}/rewind/${n}`); } catch (e) { D.rw = null; }
+  if (!D || D.id !== id) return;
+  renderTimeline(); renderEdit();
+}
+const susMap = () => Object.fromEntries(((D.diag && D.diag.suspects) || []).map((s, i) => [s.step_no, [i + 1, s]]));
+function renderTimeline() {
+  const sus = susMap(), dirty = new Set(D.rw ? D.rw.will_rerun : []);
+  $("#d-tl").innerHTML = D.run.steps.map(s => {
+    const no = s.step_no, tags = [chip(s.kind.replace("_", " ")), chip(s.tokens + " tok")];
+    if (s.error) tags.push(chip("error: " + s.error, "err"));
+    if (sus[no]) tags.push(chip(`SUSPECT #${sus[no][0]} · ${Math.round(sus[no][1].confidence * 100)}%`, "sus"));
+    if (no === D.sel) tags.push(chip("edit here", "edit")); else if (dirty.has(no)) tags.push(chip("would rerun", "rerun"));
+    const open = D.open.has(no);
+    return `<div class="step ${sus[no] ? (sus[no][0] === 1 ? "sus" : "sus2") : ""} ${no === D.sel ? "sel" : ""}" data-no="${no}"><div class="hd"><b>#${no} · ${esc(s.actor)}</b>
+        <span class="dep">${s.depends_on.length ? "← depends on " + s.depends_on.join(", ") : ""}</span><span class="x" data-x="${no}">${open ? "hide details ▴" : "details ▾"}</span></div>
+      ${tags.join("")}<div class="mono">→ ${esc(short(s.output, 160)) || "∅ (empty)"}</div>
+      ${open ? `<div class="io"><h5>Input</h5><div class="mono">${esc(s.input)}</div><h5>Output</h5><div class="mono">${esc(s.output) || "(empty)"}</div></div>` : ""}</div>`;
+  }).join("");
+  $$("#d-tl .step").forEach(el => el.onclick = ev => {
+    const no = +el.dataset.no;
+    if (ev.target.dataset.x) { D.open.has(no) ? D.open.delete(no) : D.open.add(no); return renderTimeline(); }
+    if (ev.target.closest(".io") || getSelection().toString()) return;
+    pickStep(no);
+  });
+}
+function renderSuspects() {
+  const d = D.diag, el = $("#d-sus");
+  if (!d) { el.innerHTML = `<h3>Top suspects</h3><div class="cap"><span class="spin"></span>Asking /diagnose…</div>`; return; }
+  el.innerHTML = `<h3>Top suspects <span class="sp"></span><button class="btn sm" id="rediag">↻ Re-diagnose</button></h3>
+    <div class="cap">Source: ${esc(d.source)}</div>${d.mock ? `<div class="note warn">Part 2's diagnose API is not reachable, so these suspects come from Part 1's built-in heuristics.</div>` : ""}` +
+    (d.suspects.length ? d.suspects.map((s, i) => `<div class="susrow" data-no="${s.step_no}"><b>#${i + 1} · step ${s.step_no}</b> · ${esc(s.actor || "")}
+      <span style="float:right" class="cap">confidence ${Math.round(s.confidence * 100)}%</span><div class="bar"><i style="width:${Math.round(s.confidence * 100)}%"></i></div>
+      ${s.evidence.map(e => chip(e.replace(/_/g, " "))).join("")}</div>`).join("") : `<div class="cap">No suspects returned.</div>`);
+  $("#rediag").onclick = () => { D.diag = null; renderSuspects(); loadDiag(true); };
+  $$("#d-sus .susrow").forEach(r => r.onclick = () => pickStep(+r.dataset.no));
+}
+function renderWhy() {
+  const ex = D.explain, el = $("#d-why");
+  el.innerHTML = `<h3>Why did it fail?</h3>
+    <div class="row"><input class="inp" id="exllm" style="flex:1;min-width:160px" placeholder="optional LLM: llama3, groq:<model> (empty = no LLM)" value="${esc(D.exllm ?? S.meta.explain_llm)}">
+      <button class="btn" id="exgo">${ex === "busy" ? '<span class="spin"></span>Writing…' : "Explain this failure"}</button></div>
+    <div class="cap">The diagnosis model picks the suspect step. The LLM, if given, only words the explanation.</div>` +
+    (ex && ex !== "busy" ? (ex.error ? `<div class="note warn">${esc(ex.error)}</div>` :
+      `<div style="margin-top:8px"><p><b>${esc(ex.summary)}</b></p><p><b>Root cause.</b> ${esc(ex.root_cause)}</p><p><b>How it spread.</b> ${esc(ex.how_it_spread)}</p>
+       <p><b>Suggested fix.</b> ${esc(ex.suggested_fix)}</p>${ex.other_suspects ? `<div class="cap">${esc(ex.other_suspects)}</div>` : ""}<div class="cap">Explanation source: ${esc(ex.source)}</div></div>`) : "");
+  $("#exllm").oninput = e => D.exllm = e.target.value;
+  $("#exgo").onclick = async () => { if (D.explain === "busy") return; const id = D.id; D.explain = "busy"; renderWhy();
+    let r; try { r = await api("/api/explain", { run_id: id, llm: (D.exllm ?? S.meta.explain_llm) || null }); } catch (e) { r = { error: e.message }; }
+    if (D && D.id === id) { D.explain = r; renderWhy(); } };
+}
+function renderEdit() {
+  const run = D.run, stp = run.steps.find(s => s.step_no === D.sel), rw = D.rw, key = D.sel + ":" + D.mode, el = $("#d-edit");
+  const val = D.vals[key] ?? (D.mode === "input" ? stp.input : stp.output);
+  let body = "";
+  if (D.mode === "output" || D.mode === "input") {
+    const same = val === (D.mode === "input" ? stp.input : stp.output);
+    body = `<textarea class="inp" id="edval" rows="${D.mode === "input" ? 8 : 5}">${esc(val)}</textarea>
+      <div class="note warn" id="samew" style="display:${same ? "block" : "none"}">${D.mode === "output" ? "Output unchanged: the replay will reproduce the same run." : "Input unchanged: this is the same as Retry as-is."}</div>`;
+  } else if (D.mode === "rerun") body = `<div class="cap">Runs step ${D.sel} again with the same input, then reruns only the steps that depend on it.</div>`;
+  else {
+    const opts = [run.model, ...S.meta.models.filter(m => m !== run.model)];
+    body = `<div class="cap">Alternative execution: steps before ${D.sel} are restored from the record; step ${D.sel} and all ${run.steps.length - run.steps.findIndex(s => s.step_no === D.sel) - 1} step(s) after it run again, with the model you pick.</div>
+      <div class="row"><select class="inp" id="altm">${opts.map(m => `<option ${m === (D.alt || run.model) ? "selected" : ""}>${esc(m)}</option>`).join("")}</select>
+      <input class="inp" id="altc" style="flex:1;min-width:150px" placeholder="…or another model id, e.g. groq:<model>" value="${esc(D.altc || "")}"></div>`;
+  }
+  const stt = rw && rw.state;
+  el.innerHTML = `<h3>Edit and replay</h3>
+    <div class="row"><span class="cap">Step</span><select class="inp" id="edstep" style="flex:1">${run.steps.map(s => `<option value="${s.step_no}" ${s.step_no === D.sel ? "selected" : ""}>${s.step_no} · ${esc(s.actor)} (${esc(s.kind)})</option>`).join("")}</select></div>
+    ${rw ? `<div class="cap">Rewound to just before step ${D.sel}: ${rw.n_before} earlier steps frozen · an edit reruns ${rw.will_rerun.length} dependent step(s) ${rw.will_rerun.length ? "[" + rw.will_rerun.join(", ") + "]" : ""} · ${rw.will_reuse.length} reused</div>
+    <details><summary>Restored state at this checkpoint · ${esc(stt.state_hash)}</summary>
+      <div class="cap">${stt.steps_done} steps done · ${stt.tokens_spent} tokens already spent · a replay starts from exactly this state without calling the model or tools again</div>
+      ${stt.plan ? `<div class="mono" style="margin:6px 0">${esc(JSON.stringify(stt.plan, null, 1))}</div>` : ""}
+      ${stt.results_so_far.map(r => `<div class="mono">#${r.step_no} ${esc(r.actor)} → ${esc(short(r.output, 90)) || "∅ (empty)"}${r.error ? " ⚠ " + esc(r.error) : ""}</div>`).join("")}</details>` : ""}
+    <div class="seg">${MODES.map(([k, l]) => `<button class="${k === D.mode ? "on" : ""}" data-m="${k}">${l}</button>`).join("")}</div>${body}
+    <div class="row"><span class="cap">Replays (answers vary)</span><input type="range" id="nr" min="1" max="5" value="${D.nruns}" style="flex:1"><b id="nrv">${D.nruns}</b></div>
+    <button class="primary" id="go" ${D.busy ? "disabled" : ""}>${D.busy ? '<span class="spin"></span>Replaying…' : "⏪ Replay from here"}</button><div id="ederr"></div>`;
+  $("#edstep").onchange = e => pickStep(+e.target.value);
+  $$("#d-edit .seg button").forEach(b => b.onclick = () => { D.mode = b.dataset.m; renderEdit(); });
+  if ($("#edval")) $("#edval").oninput = e => { D.vals[key] = e.target.value; $("#samew").style.display = e.target.value === (D.mode === "input" ? stp.input : stp.output) ? "block" : "none"; };
+  if ($("#altm")) { $("#altm").onchange = e => D.alt = e.target.value; $("#altc").oninput = e => D.altc = e.target.value; }
+  $("#nr").oninput = e => { D.nruns = +e.target.value; $("#nrv").textContent = D.nruns; };
+  $("#go").onclick = async () => {
+    const id = D.id, step = D.sel, branch = D.mode === "branch";
+    const edit = D.mode === "output" ? { output: val2() } : D.mode === "input" ? { input: val2() } : D.mode === "rerun" ? { rerun: true } : null;
+    const model = branch ? ((D.altc || "").trim() || D.alt || run.model) : null;
+    D.busy = true; renderEdit();
+    try {
+      const data = await api("/api/replay", { run_id: id, step_no: step, edit, n_runs: D.nruns, branch, model });
+      if (!D || D.id !== id) return;
+      D.busy = false; D.result = { data, step, edit, cmp: data.comparison }; renderEdit(); renderResult();
+      $("#d-res").scrollIntoView({ behavior: "smooth", block: "start" });
+      api(`/api/runs/${id}`).then(i => { if (D && D.id === id) { D.replays = i.replays; renderPast(); } });
+      loadData();
+    } catch (e) { if (!D || D.id !== id) return; D.busy = false; renderEdit(); $("#ederr").innerHTML = `<div class="note bad">${esc(e.message)}</div>`; }
+  };
+  function val2() { return D.vals[key] ?? (D.mode === "input" ? stp.input : stp.output); }
+}
+function renderPast() {
+  const el = $("#d-past"), reps = D.replays;
+  el.innerHTML = `<h3>Past replays <span class="sp"></span><span class="cap">${reps.length}</span></h3>` + (reps.length ? `<div style="max-height:230px;overflow:auto">` + reps.map(p => {
+    const e = p.edit || {}, what = "output" in e ? "output edited" : "input" in e ? "input edited" : "retried";
+    return `<div class="susrow" data-id="${p.run_id}"><span class="badge ${p.outcome === "fail" ? "fail" : "ok"}">${p.outcome === "fail" ? "FAIL" : "OK"}</span> &nbsp;<b>${esc(p.run_id)}</b>
+      <span class="cap">· step ${p.edited_step ?? "?"} ${what} · ${esc(p.model)} · ${fmtTime(p.created_at)}</span></div>`; }).join("") + `</div>` : `<div class="cap">None yet. Edit a step and replay to test a fix.</div>`);
+  $$("#d-past .susrow").forEach(r => r.onclick = async () => {
+    const id = D.id; try { const cmp = await api(`/api/compare/${id}/${r.dataset.id}`); if (!D || D.id !== id) return;
+      D.result = { cmp, past: reps.find(p => p.run_id === r.dataset.id) }; renderResult(); $("#d-res").scrollIntoView({ behavior: "smooth", block: "start" }); } catch (e) {} });
+}
+function renderResult() {
+  const R = D.result, el = $("#d-res"); if (!R) { el.innerHTML = ""; return; }
+  const cmp = R.cmp, sm = cmp.summary, data = R.data, run = D.run;
+  let h = "";
+  if (data) {
+    const branch = data.mode === "branch", rst = data.restore, newRun = data.new_run;
+    h += `<div class="card"><h3>${branch ? "Alternative run from checkpoint" : "Replay result: edit at"} step ${R.step}</h3>
+      <div class="cap">via ${esc(data.source)} · ${data.n_runs ?? 1} replay(s) · success rate ${Math.round((data.success_rate ?? 0) * 100)}%${branch ? ` · model from step ${R.step} on: ${esc(data.model)}` : ""}</div>
+      <div class="mtiles" style="margin-top:10px">
+        <div class="tile"><div class="k">Outcome</div><div class="v">${esc(run.outcome)} → ${esc(newRun.outcome)}</div></div>
+        <div class="tile"><div class="k">Steps rerun</div><div class="v">${data.steps_rerun}</div></div>
+        <div class="tile"><div class="k">Steps reused</div><div class="v">${data.steps_reused}</div></div>
+        <div class="tile"><div class="k">Tokens saved</div><div class="v">${data.tokens_saved_pct}%</div></div></div>
+      <div class="cap">Savings meter: ${data.tokens_saved_pct}% of tokens not rerun, compared with a full rerun</div><div class="bar g"><i style="width:${Math.min(100, data.tokens_saved_pct)}%"></i></div>
+      ${rst ? (rst.exact ? `<div class="cap">✓ State restored exactly: all ${rst.prefix_steps} step(s) before step ${R.step} came from the record, none were called again · state ${esc(rst.state_hash)} = replayed ${esc(rst.replayed_hash)}</div>`
+        : `<div class="note warn">State before step ${R.step} was not restored exactly: step(s) ${esc(JSON.stringify(rst.mismatched_steps))} ran again or came back different.</div>`) : ""}
+      ${data.outcome_flipped && newRun.outcome === "success" ? `<div class="note ok">Step ${R.step} is confirmed as the cause: fixing it flips the run to success.</div>
+        <button class="btn" id="confirm">Save as confirmed cause (training data + regression test)</button> <span class="cap" id="cfmsg"></span>`
+        : `<div class="note ${data.outcome_flipped ? "warn" : "bad"}">${data.outcome_flipped ? "The outcome changed." : "Outcome not flipped: this edit did not change the result."}</div>`}</div>`;
+  }
+  const rows = cmp.steps.filter(r => !D.onlyDiff || r.status !== "same").map(r => {
+    const [lo, ro] = r.status === "changed" ? wdiff(r.a_output, r.b_output) : [esc(short(r.a_output || "", 300)) || "∅ (empty)", esc(short(r.b_output || "", 300)) || "∅ (empty)"];
+    let tags = chip(r.status, r.status !== "same" ? "err" : "");
+    if (r.replay_status) tags += chip(r.replay_status, r.replay_status);
+    if (r.input_changed) tags += chip("input changed", "rerun");
+    if (r.error_changed) tags += chip(`error: ${r.a_error} → ${r.b_error}`, "err");
+    let ind = "";
+    if (r.input_changed) { const [li, ri] = wdiff(r.a_input, r.b_input, 2000);
+      ind = `<details style="grid-column:1/-1"><summary>input diff · step ${r.b_step}</summary><div class="cmp" style="margin-top:6px"><div class="mono">${li}</div><div class="mono">${ri}</div></div></details>`; }
+    return `<div class="cmp"><div>${r.a_step != null ? `<div class="step ${r.status}"><div class="hd"><b>#${r.a_step} ${esc(r.actor)}</b></div><div class="mono">${lo}</div></div>` : ""}</div>
+      <div>${r.b_step != null ? `<div class="step ${r.status}"><div class="hd"><b>#${r.b_step} ${esc(r.actor)}</b></div>${tags}<div class="mono">${ro}</div></div>` : ""}</div>${ind}</div>`;
+  }).join("");
+  h += `<div class="card"><h3>Original vs modified trace · ${esc(cmp.a_run_id)} → ${esc(cmp.b_run_id)} <span class="sp"></span>
+      <label class="cap"><input type="checkbox" id="od" ${D.onlyDiff ? "checked" : ""}> only steps that differ</label>
+      <button class="btn sm" id="closeres">Close</button></h3>
+    <div class="cap">${sm.same} same · ${sm.changed} changed · ${sm.added} added · ${sm.removed} removed · first difference at step ${sm.first_divergence ?? "–"} · steps ${sm.steps[0]} → ${sm.steps[1]} · tokens ${sm.tokens[0]} → ${sm.tokens[1]}</div>
+    <div class="cmp" style="margin-top:10px"><div><b>Original · ${esc(sm.outcome[0])}</b><div class="cap">${esc(sm.final_answer[0] || "")}</div></div>
+      <div><b>Modified · ${esc(sm.outcome[1])}</b><div class="cap">${esc(sm.final_answer[1] || "")}</div></div></div>${rows || `<div class="cap">No differing steps.</div>`}</div>`;
+  el.innerHTML = h;
+  $("#od").onchange = e => { D.onlyDiff = e.target.checked; renderResult(); };
+  $("#closeres").onclick = () => { D.result = null; renderResult(); };
+  if ($("#confirm")) $("#confirm").onclick = async () => {
+    try { const r = await api("/api/confirm", { run_id: D.id, step_no: R.step, fixed_run_id: data.new_run.run_id, edit: R.edit, model: data.model });
+      $("#cfmsg").textContent = "Saved " + r.saved; loadData(); } catch (e) { $("#cfmsg").textContent = e.message; } };
+}
+
+/* ------------------------------------------------------------ results (Part 2 evaluation) */
+const md = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>").replace(/`(.+?)`/g, '<span class="mono">$1</span>');
+const isNum = s => /^\**[\d.,]+%?( \([A-Z]+\))?\**$/.test(s);
+async function renderResults() {
+  const main = $("#main");
+  main.innerHTML = `<div class="top"><h1>Results</h1><span class="cap" id="rcap"></span></div><div class="page" id="rpage"><div class="empty"><span class="spin"></span>Loading…</div></div>`;
+  let R; try { R = await api("/api/results"); } catch (e) { $("#rpage").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  $("#rcap").textContent = `part2/results.md · written ${new Date(R.modified * 1000).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
+  const t0 = R.sections[0] && R.sections[0].tables[0], prf = (R.sections.find(s => /Precision/.test(s.title)) || { tables: [] }).tables[0];
+  const find = (set, meth) => t0 && t0.rows.filter(r => r[0].startsWith(set) && meth.test(r[2])).sort((a, b) => b[1] - a[1])[0];
+  const tiles = [];
+  const a = find("REAL, seen setup", /^Black Box model \(simulated \+/), b = find("SIMULATED, unseen setup", /^Black Box model$/), c = find("REAL, seen setup", /^Heuristic/);
+  if (b) tiles.push(["Top-1, simulated unseen setup", b[3], `top-3 ${b[4]} · ${b[1]} runs`]);
+  if (a) tiles.push(["Top-1, real held-out tasks", a[3], `top-3 ${a[4]} · ${a[1]} runs`]);
+  if (c) tiles.push(["Heuristic baseline, same real runs", c[3], `top-3 ${c[4]}`]);
+  if (prf) { const r = prf.rows.find(r => r[0].startsWith("REAL")); if (r) tiles.push(["Per-step F1, real held-out", r[4], `precision ${r[2]} · recall ${r[3]}`]); }
+  let h = tiles.length ? `<div class="mtiles">${tiles.map(t => `<div class="tile"><div class="k">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="cap">${esc(t[2])}</div></div>`).join("")}</div>` : "";
+  if (t0) {
+    const sets = [...new Set(t0.rows.map(r => r[0]))];
+    const col = m => /^Heuristic/.test(m) ? "var(--s0)" : /simulated only/.test(m) ? "var(--s2)" : /^LLM/.test(m) ? "var(--s3)" : "var(--s1)";
+    h += `<div class="card"><h3>Top-1 accuracy by method</h3><div class="cap" style="margin-bottom:8px">Share of failed runs where the first suspect is the truly faulty step. Full-size test sets only; the small LLM-judge samples are in the table below.</div>` +
+      sets.map(set => { const rows = t0.rows.filter(r => r[0] === set), mx = Math.max(...rows.map(r => +r[1]));
+        return `<div style="margin:12px 0 4px;font-weight:600">${esc(set)} <span class="cap">· ${mx} runs</span></div>` + rows.filter(r => +r[1] === mx).map(r =>
+          `<div style="display:grid;grid-template-columns:minmax(150px,300px) 1fr 52px;gap:10px;align-items:center;margin:3px 0"><span class="cap" style="margin:0">${esc(r[2])}</span>
+           <div class="bar" style="height:10px;margin:0"><i style="width:${parseFloat(r[3])}%;background:${col(r[2])};border-radius:0 4px 4px 0"></i></div><b class="n" style="text-align:right">${esc(r[3])}</b></div>`).join(""); }).join("") + `</div>`;
+  }
+  for (const s of R.sections) {
+    h += `<div class="card">${s.title ? `<h3>${md(s.title)}</h3>` : `<h3>${md(R.title)}</h3>`}${s.text.map(p => `<p class="cap" style="font-size:12.5px">${md(p)}</p>`).join("")}` +
+      s.tables.map(t => `${t.caption ? `<div style="margin:12px 0 4px;font-weight:600">${md(t.caption)}</div>` : ""}<div class="tw"><table><tr>${t.headers.map((x, i) => `<th class="${t.rows[0] && isNum(t.rows[0][i] || "") ? "n" : ""}">${md(x)}</th>`).join("")}</tr>
+        ${t.rows.map(r => `<tr>${r.map(x => `<td class="${isNum(x) ? "n" : ""}">${md(x)}</td>`).join("")}</tr>`).join("")}</table></div>`).join("") + `</div>`;
+  }
+  $("#rpage").innerHTML = h;
+}
+
+/* ------------------------------------------------------------ custom (own query, own model, optional fault) */
+const CU = { meta: null, query: "", model: "", modelId: "", framework: "custom", mode: "normal", faultType: "empty_search", faultStep: "",
+             expected: "", busy: false, err: "", res: null, trace: null, showTrace: false, diag: null, diagBusy: false, diagErr: "",
+             verify: null, verifyBusy: false, verifyErr: "" };
+const CU_SRC = { user: "the expected answer you gave", fact_table: "the local fact table", reference_run: "the fault-free reference run" };
+function cuStage() { return CU.verify ? 5 : CU.diag ? 4 : CU.res ? 2 : 0; }
+async function renderCustom() {
+  const main = $("#main");
+  main.innerHTML = `<div class="top"><h1>Custom</h1></div>
+    <div class="page" id="cpage"><div class="empty"><span class="spin"></span>Loading…</div></div>`;
+  try { CU.meta = await api("/api/custom/meta"); } catch (e) { $("#cpage").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  if (!CU.model || !CU.meta.models.some(m => m.id === CU.model)) CU.model = (CU.meta.models[0] || {}).id || "";
+  $("#cpage").innerHTML = `<div class="cap" style="margin:0 0 8px">Run your own query on a model you pick, optionally with a controlled fault, then diagnose, replay and verify it.</div>
+    <div class="seg" id="c-steps" style="margin:0 0 14px"></div>
+    <div class="dgrid"><div><div class="card" id="c-cfg"></div><div class="card" id="c-hist"></div></div>
+    <div><div class="card" id="c-sum"></div><div class="card" id="c-diag"></div><div class="card" id="c-ver"></div></div></div>`;
+  cuConfig(); cuAll();
+}
+function cuAll() { cuSteps(); cuSummary(); cuDiag(); cuVerify(); cuHistory(); }
+function cuSteps() {
+  const el = $("#c-steps"); if (!el) return;
+  const st = cuStage(), names = ["Configure", "Run", "Inspect", "Diagnose", "Replay", "Verify"];
+  el.innerHTML = names.map((n, i) => `<button class="${i <= st ? "on" : ""}" disabled style="cursor:default">${i + 1}. ${n}</button>`).join("");
+}
+function cuConfig() {
+  const m = CU.meta, groups = [...new Set(m.models.map(x => x.group))];
+  const ready = m.providers.filter(p => p.available), off = m.providers.filter(p => !p.available && p.prefix !== "api");
+  const typed = ready.length || m.ollama_running;
+  const cur = m.models.find(x => x.id === CU.model);
+  $("#c-cfg").innerHTML = `<h3>1. Configure</h3>
+    <label class="cap" for="cq">Your query</label>
+    <textarea class="inp" id="cq" rows="4" maxlength="${m.max_query}" placeholder="Ask a question the agent should answer, e.g. ${esc(m.examples[0] || "")}" style="font-family:inherit;font-size:13px">${esc(CU.query)}</textarea>
+    <div class="row" style="margin:4px 0 0"><span class="cap" id="cqn" style="margin:0"></span><span style="flex:1"></span><span class="cap" style="margin:0">Try:</span>
+      ${m.examples.slice(0, 3).map((x, i) => `<button class="btn sm" data-ex="${i}" title="${esc(x)}">example ${i + 1}</button>`).join("")}</div>
+    <details style="margin:8px 0"><summary>What the search tool knows (it is a local fact table, not the web)</summary>
+      ${m.knowledge.map(k => `<div class="cap"><b style="color:var(--text2)">${esc(k.attribute)}</b> (${esc(k.unit)}): ${esc(k.entities.join(", "))}</div>`).join("")}
+      <div class="cap">The agent plans lookups, reads one number from each, and combines them with a calculator. A query about anything else will run, but its searches will find nothing.</div></details>
+    <label class="cap" for="cm" style="display:block;margin-top:12px">Model</label>
+    <div class="row" style="margin:2px 0"><select class="inp" id="cm" style="flex:1;min-width:150px">${groups.map(g => `<optgroup label="${esc(g)}">${m.models.filter(x => x.group === g).map(x => `<option ${x.id === CU.model ? "selected" : ""}>${esc(x.id)}</option>`).join("")}</optgroup>`).join("")}</select>
+      ${typed ? `<input class="inp" id="cmi" style="flex:1.3;min-width:170px" value="${esc(CU.modelId)}" title="When filled in, this id is used instead of the list" placeholder="…or type an id: ${esc(ready.length ? ready[0].prefix + ":<model>" : "an installed Ollama model")}">` : ""}</div>
+    <div class="cap" id="cmn">${esc(cur ? cur.note : "")}</div>
+    <div class="cap">${ready.length ? `Hosted APIs ready: ${ready.map(p => `<span class="mono">${esc(p.prefix)}:&lt;model&gt;</span>`).join(", ")}. ` : ""}${m.ollama_running ? "" : "Ollama is not running, so local models are not listed. "}${off.length ? `Not available (key not set): ${off.map(p => `${esc(p.prefix)} (${esc(p.key_env)})`).join(", ")}.` : ""}</div>
+    <label class="cap" for="cf" style="display:block;margin-top:12px">Agent framework</label>
+    <div><select class="inp" id="cf">${m.frameworks.map(x => `<option ${x === CU.framework ? "selected" : ""}>${x}</option>`).join("")}</select></div>
+    <label class="cap" style="display:block;margin-top:12px">Execution mode</label>
+    <div class="seg" style="margin:2px 0 6px"><button data-mode="normal" class="${CU.mode === "normal" ? "on" : ""}">Normal run</button><button data-mode="fault" class="${CU.mode === "fault" ? "on" : ""}">Fault injection</button></div>
+    <div id="c-fault"></div>
+    <label class="cap" for="ce" style="display:block;margin-top:12px">Expected answer (optional, a number)</label>
+    <div><input class="inp" id="ce" type="number" step="any" style="width:170px" value="${esc(CU.expected)}" placeholder="e.g. 164.6"></div>
+    <div class="cap">Used to judge success or failure. Without it the answer is checked against the fact table when the query matches it; otherwise a fault run is compared with a fault-free reference run, and a normal run only reports whether it completed.</div>
+    <div id="c-err"></div>
+    <div class="row" style="margin-top:12px"><button class="primary" id="cgo">Run Custom</button><span class="cap" id="c-busy" style="margin:0"></span></div>`;
+  const q = $("#cq"), count = () => $("#cqn").textContent = `${q.value.length} / ${m.max_query}`;
+  q.oninput = () => { CU.query = q.value; count(); }; count();
+  $$("#c-cfg [data-ex]").forEach(b => b.onclick = () => { CU.query = q.value = m.examples[+b.dataset.ex]; count(); });
+  $("#cm").onchange = e => { CU.model = e.target.value; const x = m.models.find(y => y.id === CU.model); $("#cmn").textContent = x ? x.note : ""; };
+  if ($("#cmi")) $("#cmi").oninput = e => CU.modelId = e.target.value;
+  $("#cf").onchange = e => CU.framework = e.target.value;
+  $("#ce").oninput = e => CU.expected = e.target.value;
+  $$("#c-cfg [data-mode]").forEach(b => b.onclick = () => { CU.mode = b.dataset.mode; $$("#c-cfg [data-mode]").forEach(x => x.classList.toggle("on", x === b)); cuFault(); });
+  $("#cgo").onclick = cuRun;
+  cuFault(); cuBusy();
+}
+function cuFault() {
+  const el = $("#c-fault"); if (!el) return;
+  if (CU.mode !== "fault") { el.innerHTML = `<div class="cap">No fault is injected. The agent runs your query as is.</div>`; return; }
+  const ft = CU.meta.fault_types, cur = ft.find(f => f.type === CU.faultType) || ft[0];
+  el.innerHTML = `<div class="row" style="margin:2px 0"><select class="inp" id="cft" style="flex:1;min-width:170px">${ft.map(f => `<option ${f.type === cur.type ? "selected" : ""}>${f.type}</option>`).join("")}</select>
+      <input class="inp" id="cfs" type="number" min="1" max="60" style="width:130px" value="${esc(CU.faultStep)}" placeholder="step (optional)" title="Leave empty to hit the first step this fault fits"></div>
+    <div class="cap" id="cfh">${esc(cur.help)} Your query is not changed: the fault replaces the output of one recorded step, and the run stores which step.</div>`;
+  $("#cft").onchange = e => { CU.faultType = e.target.value; cuFault(); };
+  $("#cfs").oninput = e => CU.faultStep = e.target.value;
+}
+function cuBusy() {
+  const b = $("#cgo"); if (!b) return;
+  b.disabled = CU.busy; b.innerHTML = CU.busy ? '<span class="spin"></span>Running…' : "Run Custom";
+  $("#c-busy").textContent = CU.busy ? `The agent is running${CU.mode === "fault" ? " (a fault-free reference run may be recorded first)" : ""}. Real models can take a minute.` : "";
+  $("#c-err").innerHTML = CU.err ? `<div class="note bad">${esc(CU.err)}</div>` : "";
+}
+async function cuRun() {
+  if (CU.busy) return;
+  const model = (CU.modelId || "").trim() || CU.model, query = CU.query.trim();
+  CU.err = !query ? "Type a query first." : !model ? "Pick a model." : "";
+  if (CU.err) { cuBusy(); return; }
+  const body = { query, model, framework: CU.framework, mode: CU.mode };
+  if (CU.mode === "fault") { body.fault_type = CU.faultType; if (CU.faultStep !== "") body.fault_step = +CU.faultStep; }
+  if (CU.expected !== "") body.expected = +CU.expected;
+  CU.busy = true; cuBusy();
+  try {
+    const res = await api("/api/custom/run", body);
+    Object.assign(CU, { res, trace: null, showTrace: false, diag: null, diagErr: "", verify: null, verifyErr: "" });
+    await loadData().catch(() => {});
+  } catch (e) { CU.err = e.message; }
+  CU.busy = false; cuBusy(); cuAll();
+}
+async function cuOpen(id) {
+  try { const res = await api(`/api/custom/runs/${id}`); Object.assign(CU, { res, trace: null, showTrace: false, diag: null, diagErr: "", verify: null, verifyErr: "" }); cuAll(); $("#cpage").scrollTop = 0; }
+  catch (e) { CU.err = e.message; cuBusy(); }
+}
+function cuDiagStatus() {
+  const r = CU.res, d = CU.diag;
+  if (!r) return "";
+  if (r.outcome === "success") return "Not needed: the run succeeded";
+  if (CU.verify && CU.verify.verified) return `Verified by replay: step ${CU.verify.confirmed_step}`;
+  if (!d) return "Not diagnosed yet";
+  if (!d.suspects.length) return "No suspects returned";
+  const top = d.suspects[0];
+  if (d.mock) return `Fallback heuristic only: step ${top.step_no}`;
+  return top.flagged === false ? `Low confidence: best guess step ${top.step_no}` : `Predicted: step ${top.step_no} (${Math.round(top.confidence * 100)}%)`;
+}
+function cuSummary() {
+  const el = $("#c-sum"); if (!el) return; const r = CU.res;
+  if (!r) { el.innerHTML = `<h3>2. Run summary</h3><div class="empty" style="padding:22px 10px">Nothing run yet. Configure a query on the left and press Run Custom.</div>`; return; }
+  const fail = r.outcome === "fail", f = r.fault;
+  const judged = r.judged_by === "expected" ? `Judged against ${CU_SRC[r.expected_source] || "the expected answer"}` : "Not checked for correctness: completed with a number and no step error";
+  el.innerHTML = `<h3>2. Run summary <span class="sp"></span><span class="badge ${fail ? "fail" : "ok"}">${fail ? "FAILED" : r.judged_by === "expected" ? "SUCCEEDED" : "COMPLETED"}</span></h3>
+    <div class="cap">Your query, exactly as it was sent to the agent:</div><div class="mono" style="background:#0b0b0c;border-radius:6px;padding:8px;margin-bottom:10px">${esc(r.query)}</div>
+    <div class="mtiles" style="margin-bottom:8px">
+      <div class="tile"><div class="k">Run ID</div><div class="v" style="font-size:15px">${esc(r.run_id)}</div></div>
+      <div class="tile"><div class="k">Model</div><div class="v" style="font-size:15px" title="${esc(r.model)}">${esc(r.model)}</div></div>
+      <div class="tile"><div class="k">Mode</div><div class="v" style="font-size:15px">${r.mode === "fault" ? "Fault injection" : r.mode === "reference" ? "Reference run" : "Normal run"}</div></div>
+      <div class="tile"><div class="k">Injected fault</div><div class="v" style="font-size:15px">${f ? esc(f.type) : "none"}</div></div>
+      <div class="tile"><div class="k">Answer</div><div class="v" style="font-size:15px" title="${esc(r.final_answer || "")}">${esc((r.final_answer || "?").replace(/^Final answer:\s*/, ""))}</div></div>
+      <div class="tile"><div class="k">Expected</div><div class="v" style="font-size:15px">${esc(r.expected ?? "unknown")}</div></div>
+      <div class="tile"><div class="k">Steps · tokens</div><div class="v" style="font-size:15px">${r.n_steps} · ${r.tokens.toLocaleString()}</div></div>
+      <div class="tile"><div class="k">Time in steps</div><div class="v" style="font-size:15px">${r.duration_ms >= 1000 ? (r.duration_ms / 1000).toFixed(1) + " s" : r.duration_ms + " ms"}</div></div></div>
+    <div class="cap">${esc(judged)}. Framework: ${esc(r.framework)}. Recorded ${esc(fmtTime(r.created_at))}.</div>
+    ${f ? `<div class="cap">Fault: ${f.applied ? `${chip(f.type, "sus")} applied at step ${f.step_no}` : `${chip(f.type)} requested${f.requested_step ? ` at step ${f.requested_step}` : ""}, <b>not applied</b>`}.${r.reference_run_id ? ` Fault-free reference: <a href="#/run/${esc(r.reference_run_id)}" style="color:var(--accent)">${esc(r.reference_run_id)}</a>.` : ""}</div>` : ""}
+    <div class="cap">Diagnosis status: <b style="color:var(--text2)">${esc(cuDiagStatus())}</b></div>
+    ${r.notes.map(n => `<div class="note warn">${esc(n)}</div>`).join("")}
+    <div class="row" style="margin-top:10px"><button class="btn" id="c-tr">${CU.showTrace ? "Hide" : "View"} recorded trace</button>
+      <button class="btn" id="c-dg" ${fail ? "" : "disabled"}>Diagnose</button>
+      <button class="btn" id="c-rp">Open in replay</button>
+      <button class="btn" id="c-vf" ${fail ? "" : "disabled"}>Verify</button></div>
+    <div id="c-trace"></div>`;
+  $("#c-tr").onclick = cuTrace; $("#c-dg").onclick = () => cuDiagnose(true); $("#c-vf").onclick = cuDoVerify;
+  $("#c-rp").onclick = () => location.hash = "#/run/" + encodeURIComponent(r.run_id);
+  cuTraceBody();
+}
+async function cuTrace() {
+  CU.showTrace = !CU.showTrace;
+  if (CU.showTrace && !CU.trace) { try { CU.trace = (await api(`/api/runs/${CU.res.run_id}`)).run; } catch (e) { CU.trace = { error: e.message }; } }
+  cuSummary();
+}
+function cuTraceBody() {
+  const el = $("#c-trace"); if (!el || !CU.showTrace || !CU.trace) return;
+  const t = CU.trace; if (t.error) { el.innerHTML = `<div class="note bad">${esc(t.error)}</div>`; return; }
+  const ms = Object.fromEntries((t.timing || []).map(x => [x.step_no, x])), sus = CU.diag ? CU.diag.suspects.map(s => s.step_no) : [];
+  el.innerHTML = `<div class="cap" style="margin-top:10px">${t.steps.length} recorded steps. Open in replay for full inputs, editing and comparison.</div>` + t.steps.map(s => {
+    const x = ms[s.step_no];
+    return `<div class="step ${sus[0] === s.step_no ? "sus" : sus.includes(s.step_no) ? "sus2" : ""}" style="cursor:default"><div class="hd"><b>#${s.step_no} · ${esc(s.actor)}</b>
+      <span class="dep">${s.depends_on.length ? "← " + s.depends_on.join(", ") : ""}</span><span class="x">${x ? esc(new Date(x.started_at).toLocaleTimeString()) + " · " + x.ms + " ms" : ""}</span></div>
+      ${chip(s.kind)}${chip(s.tokens + " tok")}${s.error ? chip("error: " + s.error, "err") : ""}${t.fault && t.fault.applied && t.fault.step_no === s.step_no ? chip("injected: " + t.fault.type, "sus") : ""}
+      <div class="mono">→ ${esc(short(s.output, 170)) || "∅ (empty)"}</div></div>`; }).join("");
+}
+async function cuDiagnose(refresh) {
+  if (!CU.res || CU.diagBusy) return;
+  CU.diagBusy = true; CU.diagErr = ""; cuDiag();
+  try { CU.diag = await api(`/api/runs/${CU.res.run_id}/diagnosis${refresh ? "?refresh=true" : ""}`); } catch (e) { CU.diagErr = e.message; }
+  CU.diagBusy = false; cuAll();
+}
+function cuDiag() {
+  const el = $("#c-diag"); if (!el) return; const r = CU.res, d = CU.diag;
+  let h = `<h3>3. Diagnosis</h3>`;
+  if (!r) h += `<div class="cap">Run a query first.</div>`;
+  else if (r.outcome === "success") h += `<div class="cap">This run did not fail, so there is nothing to diagnose.</div>`;
+  else if (CU.diagBusy) h += `<div class="cap"><span class="spin"></span>Asking the diagnosis model…</div>`;
+  else if (CU.diagErr) h += `<div class="note bad">${esc(CU.diagErr)}</div>`;
+  else if (!d) h += `<div class="cap">Press Diagnose to rank the steps most likely to have caused the failure.</div>`;
+  else {
+    const top = d.suspects[0], verified = CU.verify && CU.verify.verified ? CU.verify.confirmed_step : null;
+    if (d.mock) h += `<div class="note warn">The diagnosis API is not reachable, so these are Part 1's fallback heuristics, not the trained model. Source: ${esc(d.source)}</div>`;
+    else if (!top) h += `<div class="note warn">The diagnosis model returned no suspects.</div>`;
+    else if (top.flagged === false) h += `<div class="note warn"><b>Unknown / low confidence.</b> No step scores high enough to be flagged (top score ${top.score ?? "?"}). The steps below are the best guesses only; this failure may be of a kind the model was not trained on.</div>`;
+    else h += `<div class="note ok">The model flags step ${top.step_no} as the likely cause.</div>`;
+    h += `<div class="cap">${verified ? `Step ${verified} is <b style="color:#a8e6a8">confirmed by replay</b>; the rest are model predictions.` : "These are <b>model predictions</b>, not confirmed causes. Use Verify to test them by replay."} Source: ${esc(d.source)}</div>`;
+    h += d.suspects.map((s, i) => `<div class="susrow" style="cursor:default"><div class="row" style="margin:0"><b>#${i + 1} · step ${s.step_no}</b><span class="cap" style="margin:0">${esc(s.actor || "")}</span><span style="flex:1"></span>
+        ${verified === s.step_no ? '<span class="badge ok">CONFIRMED</span>' : `<span class="badge" style="color:var(--text2);border-color:var(--line2)">${s.flagged === false ? "NOT FLAGGED" : "PREDICTED"}</span>`}</div>
+      <div class="bar"><i style="width:${Math.round(s.confidence * 100)}%"></i></div>
+      <div class="cap" style="margin:0 0 4px">confidence ${Math.round(s.confidence * 100)}% of the blame in this run${s.score != null ? ` · score ${s.score}` : ""}</div>${(s.evidence || []).map(e => chip(e)).join("")}</div>`).join("");
+    h += `<div class="cap">Failure type: the diagnosis backend ranks steps and gives evidence; it does not predict a fault category.</div>`;
+    if (r.fault && r.fault.applied && top) h += `<div class="cap">Check against the injected fault (hidden from the model): injected at step ${r.fault.step_no}, top suspect is step ${top.step_no} ${top.step_no === r.fault.step_no ? "✓" : "✗"}.</div>`;
+    h += `<div class="row"><button class="btn sm" id="c-rd">↻ Diagnose again</button></div>`;
+  }
+  el.innerHTML = h; if ($("#c-rd")) $("#c-rd").onclick = () => cuDiagnose(true);
+}
+async function cuDoVerify() {
+  if (!CU.res || CU.verifyBusy) return;
+  CU.verifyBusy = true; CU.verifyErr = ""; cuVerify();
+  try { CU.verify = await api("/api/custom/verify", { run_id: CU.res.run_id, n_runs: 1 }); if (!CU.diag) CU.diag = await api(`/api/runs/${CU.res.run_id}/diagnosis`); await loadData().catch(() => {}); }
+  catch (e) { CU.verifyErr = e.message; }
+  CU.verifyBusy = false; cuAll();
+}
+function cuVerify() {
+  const el = $("#c-ver"); if (!el) return; const r = CU.res, v = CU.verify;
+  let h = `<h3>4. Replay and verification</h3>`;
+  if (!r) h += `<div class="cap">Run a query first.</div>`;
+  else if (r.outcome === "success") h += `<div class="cap">This run did not fail, so there is nothing to verify. You can still open it in replay to edit a step and compare.</div>`;
+  else if (CU.verifyBusy) h += `<div class="cap"><span class="spin"></span>Replaying the suspects one by one…</div>`;
+  else if (CU.verifyErr) h += `<div class="note bad">${esc(CU.verifyErr)}</div>`;
+  else if (!v) h += `<div class="cap">Verify replays each suspect in order with a plain retry of that step and checks whether the run then succeeds. For your own edits (new output, new input, another model) use Open in replay.</div>`;
+  else {
+    h += v.verified ? `<div class="note ok"><b>Verified.</b> Retrying step ${v.confirmed_step} turned the run into a success, so that step is on the path that caused the failure.${v.matches_injected === true ? " It is the step the fault was injected at." : v.matches_injected === false ? ` The fault was injected at step ${v.injected_step}, a different step.` : ""}</div>`
+      : `<div class="note warn"><b>Not verified.</b> Retrying the suspect steps did not make the run succeed. Try your own edit in replay, or the cause may be outside the top suspects.</div>`;
+    if (v.mock_diagnosis) h += `<div class="note warn">Suspects came from the fallback heuristics because the diagnosis API was not reachable.</div>`;
+    h += `<div class="tw"><table><tr><th>Suspect step</th><th>Fix tried</th><th>Result</th><th class="n">Steps rerun</th><th class="n">Steps reused</th><th class="n">Tokens saved</th><th>Replay run</th></tr>
+      ${v.attempts.map(a => a.error ? `<tr><td>${a.step_no}</td><td>${esc(v.fix_tried)}</td><td colspan="5">replay failed: ${esc(a.error)}</td></tr>`
+        : `<tr><td>${a.step_no}</td><td>${esc(v.fix_tried)}</td><td>${a.outcome_flipped ? "fail → success" : "still " + esc(a.new_outcome)}</td><td class="n">${a.steps_rerun}</td><td class="n">${a.steps_reused}</td><td class="n">${a.tokens_saved_pct}%</td>
+           <td><a href="#/run/${esc(r.run_id)}" style="color:var(--accent)">${esc(a.new_run_id)}</a></td></tr>`).join("")}</table></div>
+      <div class="cap">Replays are saved under the original run; open it to compare the original and replayed traces side by side.</div>`;
+  }
+  if (r) h += `<div class="row"><button class="btn sm" id="c-v2" ${r.outcome === "fail" && !CU.verifyBusy ? "" : "disabled"}>${v ? "Verify again" : "Verify"}</button><button class="btn sm" id="c-r2">Open in replay</button></div>`;
+  el.innerHTML = h;
+  if ($("#c-v2")) $("#c-v2").onclick = cuDoVerify;
+  if ($("#c-r2")) $("#c-r2").onclick = () => location.hash = "#/run/" + encodeURIComponent(r.run_id);
+}
+function cuHistory() {
+  const el = $("#c-hist"); if (!el) return;
+  const rows = S.runs.filter(r => r.custom).slice(0, 12);
+  el.innerHTML = `<h3>Custom runs <span class="sp"></span><span class="cap">${S.runs.filter(r => r.custom).length} recorded · also listed under Activity</span></h3>` +
+    (rows.length ? rows.map(r => { const st = runStatus(r); return `<div class="susrow" data-id="${esc(r.run_id)}"><div class="row" style="margin:0"><span class="badge ${r.outcome === "fail" ? "fail" : "ok"}">${r.outcome === "fail" ? "FAIL" : "OK"}</span>
+        <b>${esc(r.run_id)}</b><span class="cap" style="margin:0">${esc(r.model)} · ${r.custom === "fault" ? esc(r.fault_type || "fault") : r.custom === "reference" ? "reference run" : "normal"}</span><span style="flex:1"></span><span class="st ${st.cls}"><i>${st.icon}</i>${esc(st.text)}</span></div>
+        <div class="cap" style="margin:4px 0 0">${esc(short(r.task, 120))}</div></div>`; }).join("")
+      : `<div class="empty" style="padding:18px 10px">No custom runs yet.</div>`);
+  $$("#c-hist .susrow").forEach(x => x.onclick = () => cuOpen(x.dataset.id));
+}
+
+/* ------------------------------------------------------------ record modal */
+function openRecord() {
+  const m = S.meta;
+  $("#modalBox").innerHTML = `<h3 style="margin:0 0 4px">Record a new run</h3><div class="cap">Runs the agent on a task and records every step. mock-* models run offline.</div>
+    <label>Task</label><select class="inp" id="rt">${m.tasks.map(t => `<option value="${t.task_id}">${t.task_id}${t.demo ? " ★" : ""} · ${esc(t.text)}</option>`).join("")}</select>
+    <label>Model</label><div class="row" style="margin:0"><select class="inp" id="rm" style="flex:1">${m.models.map(x => `<option>${x}</option>`).join("")}</select>
+      <input class="inp" id="rmc" style="flex:1.4" placeholder="…or groq:<model>, openai:<model>, ollama:<model>"></div>
+    <label>Framework</label><select class="inp" id="rf">${m.frameworks.map(x => `<option>${x}</option>`).join("")}</select>
+    <label>Inject fault</label><div class="row" style="margin:0"><select class="inp" id="rft" style="flex:1"><option>none</option>${m.fault_types.map(x => `<option>${x}</option>`).join("")}</select>
+      <input class="inp" id="rfs" type="number" min="0" max="40" value="0" style="width:90px" title="Fault at step (0 = first compatible step)"></div>
+    <div class="cap">Fault step: 0 means the first compatible step.</div><div id="rerr"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="rcancel">Cancel</button><button class="primary" id="rgo">Run agent</button></div>`;
+  $("#modal").classList.add("on");
+  $("#rcancel").onclick = () => $("#modal").classList.remove("on");
+  $("#rgo").onclick = async () => {
+    const b = $("#rgo"); b.disabled = true; b.innerHTML = '<span class="spin"></span>Running agent…';
+    try { const r = await api("/api/record", { task_id: $("#rt").value, model: $("#rmc").value.trim() || $("#rm").value, framework: $("#rf").value, fault_type: $("#rft").value, fault_step: +$("#rfs").value || null });
+      await loadData(); $("#modal").classList.remove("on"); location.hash = "#/run/" + r.run_id; }
+    catch (e) { $("#rerr").innerHTML = `<div class="note bad">${esc(e.message)}</div>`; b.disabled = false; b.textContent = "Run agent"; }
+  };
+}
+$("#recBtn").onclick = openRecord;
+$("#modal").onclick = e => { if (e.target.id === "modal") $("#modal").classList.remove("on"); };
+
+/* ------------------------------------------------------------ boot + routing */
+async function loadData() { [S.runs, S.replays] = await Promise.all([api("/api/runs"), api("/api/replays")]); if (!location.hash.replace(/^#\/?/, "")) { renderSide(); renderThreads(); renderOverview(); } }
+async function loadMeta() {
+  S.meta = await api("/api/meta");
+  const s = S.meta.services, line = (ok, name, url, off) => `<div><span class="dot ${ok ? "up" : "down"}"></span><b>${name}</b><br>${ok ? esc(url.replace(/^https?:\/\//, "")) : off}</div>`;
+  $("#svc").innerHTML = line(s.diagnose, "Diagnose API", S.meta.diagnose_url, "offline, using built-in mock") + line(s.replay, "Replay API", S.meta.replay_url, "offline, replaying in-process");
+}
+function route() {
+  const h = location.hash.replace(/^#\/?/, ""); hideTip();
+  $$(".nav").forEach(n => n.classList.toggle("on", n.dataset.go === (h === "results" ? "#/results" : h === "custom" ? "#/custom" : "#/")));
+  $("#side").style.display = h ? "none" : "";
+  if (h.startsWith("run/")) openRun(decodeURIComponent(h.slice(4)));
+  else if (h === "results") renderResults();
+  else if (h === "custom") renderCustom();
+  else { D = null; renderActivity(); }
+}
+$$(".nav").forEach(n => n.onclick = () => location.hash = n.dataset.go);
+addEventListener("hashchange", route);
+(async () => {
+  try { await loadMeta(); await loadData(); route(); setInterval(() => loadMeta().catch(() => {}), 20000); }
+  catch (e) { $("#main").innerHTML = `<div class="empty">Could not load the dashboard data: ${esc(e.message)}</div>`; }
+})();
+</script>
+</body>
+</html>

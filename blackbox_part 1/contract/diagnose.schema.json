@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /diagnose response (request body = a full run, see run.schema.json)",
+  "type": "object",
+  "required": ["suspects"],
+  "properties": {
+    "suspects": {
+      "type": "array", "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["step_no", "confidence", "evidence"],
+        "properties": {
+          "step_no": {"type": "integer", "minimum": 1},
+          "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+          "evidence": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "blackbox/run.schema.json",
+  "title": "Black Box run (shared contract, frozen)",
+  "type": "object",
+  "required": ["run_id", "framework", "model", "task", "outcome", "faulty_step", "steps"],
+  "properties": {
+    "run_id": {"type": "string"},
+    "framework": {"type": "string", "examples": ["custom", "langgraph"]},
+    "model": {"type": "string", "examples": ["llama3", "mock-large"]},
+    "task": {"type": "string"},
+    "outcome": {"enum": ["success", "fail"]},
+    "faulty_step": {"type": ["integer", "null"], "minimum": 1},
+    "steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["step_no", "actor", "kind", "input", "output", "depends_on", "error", "tokens"],
+        "properties": {
+          "step_no": {"type": "integer", "minimum": 1},
+          "actor": {"type": "string"},
+          "kind": {"enum": ["model_call", "tool_call", "decision"]},
+          "input": {"type": "string"},
+          "output": {"type": "string"},
+          "depends_on": {"type": "array", "items": {"type": "integer", "minimum": 1}},
+          "error": {"type": ["string", "null"]},
+          "tokens": {"type": "integer", "minimum": 0}
+        },
+        "additionalProperties": true
+      }
+    },
+    "task_id": {"type": ["string", "null"], "description": "optional"},
+    "final_answer": {"type": "string", "description": "optional"},
+    "created_at": {"type": "string", "description": "optional"},
+    "fault": {"type": "object", "description": "optional: injected fault {step_no,type,seed,applied}"},
+    "parent_run_id": {"type": ["string", "null"], "description": "optional: set on replayed runs"},
+    "replay": {"type": "object", "description": "optional: replay metadata on replayed runs"}
+  },
+  "additionalProperties": true
+}

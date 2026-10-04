@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "POST /replay request and response",
+  "$defs": {
+    "request": {
+      "type": "object",
+      "required": ["step_no", "edit"],
+      "properties": {
+        "run_id": {"type": "string"},
+        "step_no": {"type": "integer", "minimum": 1},
+        "edit": {
+          "type": "object",
+          "description": "exactly one of: output (replace the step's output), input (rerun the step with a new input), rerun:true (retry the step as-is)",
+          "minProperties": 1, "maxProperties": 1,
+          "properties": {"output": {"type": "string"}, "input": {"type": "string"}, "rerun": {"const": true}}
+        },
+        "run": {"type": "object", "description": "optional inline run when run_id is not in Part 1's store"},
+        "n_runs": {"type": "integer", "minimum": 1, "maximum": 10, "default": 3}
+      }
+    },
+    "response": {
+      "type": "object",
+      "required": ["new_run", "outcome_flipped", "steps_rerun", "steps_reused", "tokens_saved_pct"],
+      "properties": {
+        "new_run": {"type": "object"},
+        "outcome_flipped": {"type": "boolean"},
+        "steps_rerun": {"type": "integer"},
+        "steps_reused": {"type": "integer"},
+        "tokens_saved_pct": {"type": "integer"},
+        "original_run_id": {"type": ["string", "null"]},
+        "n_runs": {"type": "integer"},
+        "success_rate": {"type": "number"},
+        "replays": {"type": "array"}
+      }
+    }
+  }
+}

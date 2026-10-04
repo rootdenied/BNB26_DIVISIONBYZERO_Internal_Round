@@ -1,0 +1,105 @@
+{
+  "run_id": "run_0310",
+  "framework": "langgraph",
+  "model": "mock-large",
+  "task": "What is the combined population of Canada and Turkey in millions?",
+  "outcome": "fail",
+  "faulty_step": 6,
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "decision",
+      "input": "### PLAN\nYou are a research agent with two tools:\n- search(query): looks up one fact, e.g. \"population of France\"\n- calculator(expression): evaluates arithmetic, e.g. \"12.5+3\"\n\nTask: What is the combined population of Canada and Turkey in millions?\n\nMake a plan. Search for each fact you need (one search per fact, in the order the task\nmentions them), then give ONE arithmetic expression that combines the facts, using\n{0}, {1}, ... as placeholders for the numbers found by search 0, search 1, ...\nReply with JSON only, for example:\n{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Mont Blanc\"}, {\"tool\": \"search\", \"query\": \"height of Ben Nevis\"}], \"expression\": \"{0}-{1}\"}\n",
+      "output": "{\"steps\": [{\"tool\": \"search\", \"query\": \"Canada total population\"}, {\"tool\": \"search\", \"query\": \"Turkey total population\"}], \"expression\": \"{0}+{1}\"}",
+      "depends_on": [],
+      "error": null,
+      "tokens": 206
+    },
+    {
+      "step_no": 2,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Canada total population",
+      "output": "Canada has a population of 40.1 million people.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Canada total population\nText: Canada has a population of 40.1 million people.\n",
+      "output": "40.1",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 64
+    },
+    {
+      "step_no": 4,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Turkey total population",
+      "output": "Turkey has a population of 85.8 million people.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Turkey total population\nText: Turkey has a population of 85.8 million people.\n",
+      "output": "85.8",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 64
+    },
+    {
+      "step_no": 6,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "40.1+85.8",
+      "output": "",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "### ANSWER\nTask: What is the combined population of Canada and Turkey in millions?\nCalculation result: unavailable\n\nWrite the final answer as: Final answer: <number>\n",
+      "output": "Final answer: unknown",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 46
+    }
+  ],
+  "task_id": "t05",
+  "final_answer": "Final answer: unknown",
+  "created_at": "2026-10-03T17:41:31+00:00",
+  "fault": {
+    "step_no": 6,
+    "type": "skipped_step",
+    "seed": 2045,
+    "applied": true
+  }
+}

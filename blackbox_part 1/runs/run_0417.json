@@ -1,0 +1,130 @@
+{
+  "run_id": "run_0417",
+  "framework": "langgraph",
+  "model": "mock-large",
+  "task": "What is the average length in kilometers of the Mekong, Amazon and Danube rivers?",
+  "outcome": "fail",
+  "faulty_step": 3,
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "decision",
+      "input": "### PLAN\nYou are a research agent with two tools:\n- search(query): looks up one fact, e.g. \"population of France\"\n- calculator(expression): evaluates arithmetic, e.g. \"12.5+3\"\n\nTask: What is the average length in kilometers of the Mekong, Amazon and Danube rivers?\n\nMake a plan. Search for each fact you need (one search per fact, in the order the task\nmentions them), then give ONE arithmetic expression that combines the facts, using\n{0}, {1}, ... as placeholders for the numbers found by search 0, search 1, ...\nReply with JSON only, for example:\n{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Mont Blanc\"}, {\"tool\": \"search\", \"query\": \"height of Ben Nevis\"}], \"expression\": \"{0}-{1}\"}\n",
+      "output": "{\"steps\": [{\"tool\": \"search\", \"query\": \"Mekong total length\"}, {\"tool\": \"search\", \"query\": \"Amazon total length\"}, {\"tool\": \"search\", \"query\": \"Danube total length\"}], \"expression\": \"({0}+{1}+{2})/3\"}",
+      "depends_on": [],
+      "error": null,
+      "tokens": 223
+    },
+    {
+      "step_no": 2,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Mekong total length",
+      "output": "The Mekong river is 4350 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Mekong total length\nText: The Mekong river is 4350 kilometers long.\n",
+      "output": "3088.5",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 4,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Amazon total length",
+      "output": "The Amazon river is 6400 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Amazon total length\nText: The Amazon river is 6400 kilometers long.\n",
+      "output": "6400",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 6,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Danube total length",
+      "output": "The Danube river is 2850 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Danube total length\nText: The Danube river is 2850 kilometers long.\n",
+      "output": "2850",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 8,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "(3088.5+6400+2850)/3",
+      "output": "4112.833333",
+      "depends_on": [
+        1,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 9,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "### ANSWER\nTask: What is the average length in kilometers of the Mekong, Amazon and Danube rivers?\nCalculation result: 4112.833333\n\nWrite the final answer as: Final answer: <number>\n",
+      "output": "Final answer: 4112.83",
+      "depends_on": [
+        8
+      ],
+      "error": null,
+      "tokens": 50
+    }
+  ],
+  "task_id": "t23",
+  "final_answer": "Final answer: 4112.83",
+  "created_at": "2026-10-03T17:41:37+00:00",
+  "fault": {
+    "step_no": 3,
+    "type": "wrong_number",
+    "seed": 4073,
+    "applied": true
+  }
+}

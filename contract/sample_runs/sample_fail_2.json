@@ -1,0 +1,107 @@
+{
+  "run_id": "run_0001_f31244",
+  "framework": "langgraph",
+  "model": "gpt-4o-mini",
+  "task": "What is the average land area in sq km of Fiji and Chile?",
+  "outcome": "fail",
+  "faulty_step": 8,
+  "fault_type": "skipped_step",
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner_node",
+      "kind": "model_call",
+      "input": "What is the average land area in sq km of Fiji and Chile?",
+      "output": "Plan: look up land area in sq km of Fiji; look up land area in sq km of Chile; then compute the average; then answer.",
+      "depends_on": [],
+      "error": null,
+      "tokens": 43
+    },
+    {
+      "step_no": 2,
+      "actor": "router",
+      "kind": "decision",
+      "input": "Choose a tool for: land area in sq km of Fiji",
+      "output": "route: search",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 14
+    },
+    {
+      "step_no": 3,
+      "actor": "tools_node",
+      "kind": "tool_call",
+      "input": "search: land area in sq km of Fiji",
+      "output": "Fiji land area in sq km: 7,330,617 (source: worldfacts.example)",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 4,
+      "actor": "agent_node",
+      "kind": "model_call",
+      "input": "Extract the land area in sq km of Fiji from: Fiji land area in sq km: 7,330,617 (source: worldfacts.example)",
+      "output": "The land area in sq km of Fiji is 7330617.",
+      "depends_on": [
+        3
+      ],
+      "error": null,
+      "tokens": 37
+    },
+    {
+      "step_no": 5,
+      "actor": "router",
+      "kind": "decision",
+      "input": "Choose a tool for: land area in sq km of Chile",
+      "output": "route: search",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 14
+    },
+    {
+      "step_no": 6,
+      "actor": "tools_node",
+      "kind": "tool_call",
+      "input": "search: land area in sq km of Chile",
+      "output": "Chile land area in sq km: 3,333,375 (source: worldfacts.example)",
+      "depends_on": [
+        5
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "agent_node",
+      "kind": "model_call",
+      "input": "Extract the land area in sq km of Chile from: Chile land area in sq km: 3,333,375 (source: worldfacts.example)",
+      "output": "3333375",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 29
+    },
+    {
+      "step_no": 8,
+      "actor": "agent_node",
+      "kind": "model_call",
+      "input": "Task: What is the average land area in sq km of Fiji and Chile?\nValues: 7330617, 3333375",
+      "output": "The answer is 5332796.",
+      "depends_on": [
+        4,
+        7
+      ],
+      "error": null,
+      "tokens": 27
+    }
+  ],
+  "source_run_id": "run_0001"
+}

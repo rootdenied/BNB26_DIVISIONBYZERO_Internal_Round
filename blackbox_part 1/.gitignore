@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+data/
+replays/
+confirmed/
+.pytest_cache/

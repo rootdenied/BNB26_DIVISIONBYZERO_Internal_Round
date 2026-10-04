@@ -1,0 +1,120 @@
+{
+  "run_id": "run_0000_f777572",
+  "framework": "custom",
+  "model": "gpt-4o-mini",
+  "task": "What is the average annual rainfall in mm of Ghana, Mali and Italy?",
+  "outcome": "fail",
+  "faulty_step": 2,
+  "fault_type": "wrong_tool_result",
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "model_call",
+      "input": "What is the average annual rainfall in mm of Ghana, Mali and Italy?",
+      "output": "Plan: look up annual rainfall in mm of Ghana; look up annual rainfall in mm of Mali; look up annual rainfall in mm of Italy; then compute the average; then answer.",
+      "depends_on": [],
+      "error": null,
+      "tokens": 57
+    },
+    {
+      "step_no": 2,
+      "actor": "search_tool",
+      "kind": "tool_call",
+      "input": "search: annual rainfall in mm of Ghana",
+      "output": "Ghana annual rainfall in mm: 5,561,042 (source: worldfacts.example)",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "extractor",
+      "kind": "model_call",
+      "input": "Extract the annual rainfall in mm of Ghana from: Ghana annual rainfall in mm: 5,561,042 (source: worldfacts.example)",
+      "output": "5561042",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 30
+    },
+    {
+      "step_no": 4,
+      "actor": "search_tool",
+      "kind": "tool_call",
+      "input": "search: annual rainfall in mm of Mali",
+      "output": "Mali annual rainfall in mm: 8,109,048 (source: worldfacts.example)",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "extractor",
+      "kind": "model_call",
+      "input": "Extract the annual rainfall in mm of Mali from: Mali annual rainfall in mm: 8,109,048 (source: worldfacts.example)",
+      "output": "8109048",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 30
+    },
+    {
+      "step_no": 6,
+      "actor": "search_tool",
+      "kind": "tool_call",
+      "input": "search: annual rainfall in mm of Italy",
+      "output": "Italy annual rainfall in mm: 6,542,048 (source: worldfacts.example)",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "extractor",
+      "kind": "model_call",
+      "input": "Extract the annual rainfall in mm of Italy from: Italy annual rainfall in mm: 6,542,048 (source: worldfacts.example)",
+      "output": "6542048",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 30
+    },
+    {
+      "step_no": 8,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "calculate: (5561042 + 8109048 + 6542048) / 3",
+      "output": "6737379.33",
+      "depends_on": [
+        3,
+        5,
+        7
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 9,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "Task: What is the average annual rainfall in mm of Ghana, Mali and Italy?\nResult: 6737379.33",
+      "output": "The answer is 6737379.33.",
+      "depends_on": [
+        8
+      ],
+      "error": null,
+      "tokens": 29
+    }
+  ],
+  "source_run_id": "run_0000"
+}

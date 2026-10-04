@@ -1,0 +1,99 @@
+{
+  "run_id": "run_0203",
+  "framework": "custom",
+  "model": "mock-small",
+  "task": "How much taller is Kilimanjaro than Matterhorn, in meters?",
+  "outcome": "success",
+  "faulty_step": null,
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "decision",
+      "input": "### PLAN\nYou are a research agent with two tools:\n- search(query): looks up one fact, e.g. \"population of France\"\n- calculator(expression): evaluates arithmetic, e.g. \"12.5+3\"\n\nTask: How much taller is Kilimanjaro than Matterhorn, in meters?\n\nMake a plan. Search for each fact you need (one search per fact, in the order the task\nmentions them), then give ONE arithmetic expression that combines the facts, using\n{0}, {1}, ... as placeholders for the numbers found by search 0, search 1, ...\nReply with JSON only, for example:\n{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Mont Blanc\"}, {\"tool\": \"search\", \"query\": \"height of Ben Nevis\"}], \"expression\": \"{0}-{1}\"}\n",
+      "output": "{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Kilimanjaro\"}, {\"tool\": \"search\", \"query\": \"height of Matterhorn\"}], \"expression\": \"{0}-{1}\"}",
+      "depends_on": [],
+      "error": null,
+      "tokens": 202
+    },
+    {
+      "step_no": 2,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "height of Kilimanjaro",
+      "output": "Kilimanjaro is 5895 meters tall.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: height of Kilimanjaro\nText: Kilimanjaro is 5895 meters tall.\n",
+      "output": "5895",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 59
+    },
+    {
+      "step_no": 4,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "height of Matterhorn",
+      "output": "Matterhorn is 4478 meters tall.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: height of Matterhorn\nText: Matterhorn is 4478 meters tall.\n",
+      "output": "4478",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 59
+    },
+    {
+      "step_no": 6,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "5895-4478",
+      "output": "1417",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "### ANSWER\nTask: How much taller is Kilimanjaro than Matterhorn, in meters?\nCalculation result: 1417\n\nWrite the final answer as: Final answer: <number>\n",
+      "output": "Final answer: 1417",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 42
+    }
+  ],
+  "task_id": "t13",
+  "final_answer": "Final answer: 1417",
+  "created_at": "2026-10-03T16:13:57+00:00"
+}

@@ -1,0 +1,105 @@
+{
+  "run_id": "run_0083",
+  "framework": "custom",
+  "model": "mock-large",
+  "task": "How much taller is Everest than Aconcagua, in meters?",
+  "outcome": "fail",
+  "faulty_step": 6,
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "decision",
+      "input": "### PLAN\nYou are a research agent with two tools:\n- search(query): looks up one fact, e.g. \"population of France\"\n- calculator(expression): evaluates arithmetic, e.g. \"12.5+3\"\n\nTask: How much taller is Everest than Aconcagua, in meters?\n\nMake a plan. Search for each fact you need (one search per fact, in the order the task\nmentions them), then give ONE arithmetic expression that combines the facts, using\n{0}, {1}, ... as placeholders for the numbers found by search 0, search 1, ...\nReply with JSON only, for example:\n{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Mont Blanc\"}, {\"tool\": \"search\", \"query\": \"height of Ben Nevis\"}], \"expression\": \"{0}-{1}\"}\n",
+      "output": "{\"steps\": [{\"tool\": \"search\", \"query\": \"Everest total height\"}, {\"tool\": \"search\", \"query\": \"Aconcagua total height\"}], \"expression\": \"{0}-{1}\"}",
+      "depends_on": [],
+      "error": null,
+      "tokens": 202
+    },
+    {
+      "step_no": 2,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Everest total height",
+      "output": "Everest is 8849 meters tall.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Everest total height\nText: Everest is 8849 meters tall.\n",
+      "output": "8849",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 58
+    },
+    {
+      "step_no": 4,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Aconcagua total height",
+      "output": "Aconcagua is 6961 meters tall.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Aconcagua total height\nText: Aconcagua is 6961 meters tall.\n",
+      "output": "6961",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 59
+    },
+    {
+      "step_no": 6,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "8849-6961",
+      "output": "",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "### ANSWER\nTask: How much taller is Everest than Aconcagua, in meters?\nCalculation result: unavailable\n\nWrite the final answer as: Final answer: <number>\n",
+      "output": "Final answer: unknown",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 43
+    }
+  ],
+  "task_id": "t14",
+  "final_answer": "Final answer: unknown",
+  "created_at": "2026-10-03T16:13:56+00:00",
+  "fault": {
+    "step_no": 6,
+    "type": "skipped_step",
+    "seed": 2927,
+    "applied": true
+  }
+}

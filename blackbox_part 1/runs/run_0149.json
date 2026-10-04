@@ -1,0 +1,131 @@
+{
+  "run_id": "run_0149",
+  "framework": "custom",
+  "model": "mock-large",
+  "task": "What is the average length in kilometers of the Mekong, Volga and Ganges rivers?",
+  "outcome": "fail",
+  "faulty_step": 8,
+  "steps": [
+    {
+      "step_no": 1,
+      "actor": "planner",
+      "kind": "decision",
+      "input": "### PLAN\nYou are a research agent with two tools:\n- search(query): looks up one fact, e.g. \"population of France\"\n- calculator(expression): evaluates arithmetic, e.g. \"12.5+3\"\n\nTask: What is the average length in kilometers of the Mekong, Volga and Ganges rivers?\n\nMake a plan. Search for each fact you need (one search per fact, in the order the task\nmentions them), then give ONE arithmetic expression that combines the facts, using\n{0}, {1}, ... as placeholders for the numbers found by search 0, search 1, ...\nReply with JSON only, for example:\n{\"steps\": [{\"tool\": \"search\", \"query\": \"height of Mont Blanc\"}, {\"tool\": \"search\", \"query\": \"height of Ben Nevis\"}], \"expression\": \"{0}-{1}\"}\n",
+      "output": "{\"steps\": [{\"tool\": \"search\", \"query\": \"Mekong total length\"}, {\"tool\": \"search\", \"query\": \"Volga total length\"}, {\"tool\": \"search\", \"query\": \"Ganges total length\"}], \"expression\": \"({0}+{1}+{2})/3\"}",
+      "depends_on": [],
+      "error": null,
+      "tokens": 221
+    },
+    {
+      "step_no": 2,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Mekong total length",
+      "output": "The Mekong river is 4350 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 3,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Mekong total length\nText: The Mekong river is 4350 kilometers long.\n",
+      "output": "4350",
+      "depends_on": [
+        2
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 4,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Volga total length",
+      "output": "The Volga river is 3530 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 5,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Volga total length\nText: The Volga river is 3530 kilometers long.\n",
+      "output": "3530",
+      "depends_on": [
+        4
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 6,
+      "actor": "search_agent",
+      "kind": "tool_call",
+      "input": "Ganges total length",
+      "output": "The Ganges river is 2525 kilometers long.",
+      "depends_on": [
+        1
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 7,
+      "actor": "reader",
+      "kind": "model_call",
+      "input": "### READ\nExtract the single number that answers the question from the text.\nReply with the number only (no units, no words). If there is no number, reply: unknown\n\nQuestion: Ganges total length\nText: The Ganges river is 2525 kilometers long.\n",
+      "output": "2525",
+      "depends_on": [
+        6
+      ],
+      "error": null,
+      "tokens": 61
+    },
+    {
+      "step_no": 8,
+      "actor": "calculator",
+      "kind": "tool_call",
+      "input": "(4350+3530+2525)/3",
+      "output": "",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7
+      ],
+      "error": null,
+      "tokens": 0
+    },
+    {
+      "step_no": 9,
+      "actor": "answerer",
+      "kind": "model_call",
+      "input": "### ANSWER\nTask: What is the average length in kilometers of the Mekong, Volga and Ganges rivers?\nCalculation result: unavailable\n\nWrite the final answer as: Final answer: <number>\n",
+      "output": "Final answer: unknown",
+      "depends_on": [
+        8
+      ],
+      "error": null,
+      "tokens": 50
+    }
+  ],
+  "task_id": "t25",
+  "final_answer": "Final answer: unknown",
+  "created_at": "2026-10-03T16:13:56+00:00",
+  "fault": {
+    "step_no": 8,
+    "type": "skipped_step",
+    "seed": 7956,
+    "applied": true
+  }
+}
