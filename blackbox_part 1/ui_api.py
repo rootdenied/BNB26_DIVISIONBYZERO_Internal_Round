@@ -297,10 +297,13 @@ def _custom_summary(run: dict, reference: Optional[dict] = None) -> dict:
         notes.append(f"{missed} search step(s) found nothing. This run used the local fact table; "
                      "see \"How lookups work\".")
     if live:
-        notes.append("Lookups in this run were answered by the model"
-                     + (", with Wikipedia text as reference where a page was found" if any(
-                         v.get("source") != "model" for v in (c.get("lookups") or {}).values()) else " from its own knowledge")
-                     + ". They are not verified facts.")
+        src = {v.get("source") for v in (c.get("lookups") or {}).values()}
+        parts = ([] if "wikidata" not in src else ["Wikidata (latest dated value on record)"]) + \
+                ([] if "wikipedia+model" not in src else ["the model reading a Wikipedia extract"]) + \
+                ([] if "model" not in src else ["the model's own knowledge, which can be out of date"])
+        if parts:
+            notes.append("Lookups in this run came from " + ", ".join(parts) + ". "
+                         + ("" if src == {"wikidata"} else "Model answers are not verified facts."))
     if c.get("judged_by") == "completed":
         notes.append("No expected answer was available, so the outcome only says whether the run finished with a "
                      "number and no step error. It does not say the answer is correct.")

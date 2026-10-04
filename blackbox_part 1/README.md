@@ -17,7 +17,7 @@ Full API spec: [`contract/api.md`](contract/api.md).
 cd "C:\Users\Atharva Wadekar\OneDrive\Documents\Hackathon\blackbox"
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m pytest -q tests          # 41 tests, offline, a few seconds
+python -m pytest -q tests          # 42 tests, offline, a few seconds
 ```
 
 ## Test Part 1 alone (no Part 2, no Ollama)
@@ -74,11 +74,14 @@ with diagnosis, replay and verify.
 * **Verify:** `POST /api/custom/verify` replays each suspect in order with a plain retry through the
   existing replay and reports the first one that flips the run.
 * **Lookups** (saved in the run as `custom.search`, and reused by replays):
-  * `live`: any free-form query on a real model. Each search is answered in one sentence by the model you
-    picked, with a Wikipedia extract as reference when Wikipedia is reachable, and numbers written out in
-    full digits so the lookups of one run can be combined. `custom.lookups` records the source of each one
-    (`wikipedia+model` or `model`). These are not verified facts. `BLACKBOX_WEB_SEARCH=0` turns the
-    Wikipedia part off. A fault run reuses the lookups of its fault-free reference run.
+  * `live`: any free-form query on a real model. Each search tries, in order: (1) **Wikidata** for
+    population, area, elevation/height, length and GDP, taking the most recently dated value on record
+    (read by code, no model involved, so it does not depend on what the model remembers); (2) the model
+    you picked, with a Wikipedia extract as reference; (3) the model alone when the web is not reachable.
+    `custom.lookups` records the source of each one (`wikidata` with `as_of` year, `wikipedia+model` or
+    `model`) and the trace shows it. Numbers are in full digits, or in the unit the query asks for
+    ("in millions"), so the lookups of one run can be combined. Model answers are not verified facts.
+    `BLACKBOX_WEB_SEARCH=0` turns the web off. A fault run reuses the lookups of its reference run.
   * `fact_table`: the built-in question shapes about names in `tasks.py`, and always for the mock models.
   Runs that are not custom never use live lookups; `tools.search` is unchanged for them.
 * **Limits:** the agent answers with a number, so ask for something that can be worked out from numbers.

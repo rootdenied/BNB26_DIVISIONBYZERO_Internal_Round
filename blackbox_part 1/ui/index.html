@@ -656,7 +656,7 @@ function cuConfig() {
       ${m.examples.slice(0, 3).map((x, i) => `<button class="btn sm" data-ex="${i}" title="${esc(x)}">example ${i + 1}</button>`).join("")}</div>
     <details style="margin:8px 0"><summary>How lookups work</summary>
       <div class="cap">The agent plans lookups, reads one number from each, combines them with a calculator and answers with a number. So ask for something that can be worked out from numbers.</div>
-      <div class="cap"><b style="color:var(--text2)">Any question, on a real model:</b> each lookup is answered in one sentence by the model you picked${m.web_search ? ", using Wikipedia text as reference when Wikipedia is reachable" : " from its own knowledge (web lookups are turned off)"}. These answers are not verified facts.</div>
+      <div class="cap"><b style="color:var(--text2)">Any question, on a real model:</b> ${m.web_search ? "population, area, height, length and GDP lookups read the latest dated value from Wikidata. Anything else is answered in one sentence by the model you picked, using Wikipedia text as reference. If the web is not reachable the model answers from its own knowledge, which can be out of date." : "each lookup is answered by the model from its own knowledge, which can be out of date (web lookups are turned off)."} Ask for the answer “in millions” and every lookup is given in millions.</div>
       <div class="cap"><b style="color:var(--text2)">Built-in question shapes</b> (the examples) about the names below use the local fact table instead, and are the only thing the mock models can run:</div>
       ${m.knowledge.map(k => `<div class="cap"><b style="color:var(--text2)">${esc(k.attribute)}</b> (${esc(k.unit)}): ${esc(k.entities.join(", "))}</div>`).join("")}</details>
     <label class="cap" for="cm" style="display:block;margin-top:12px">Model</label>
@@ -749,7 +749,7 @@ function cuSummary() {
       <div class="tile"><div class="k">Steps · tokens</div><div class="v" style="font-size:15px">${r.n_steps} · ${r.tokens.toLocaleString()}</div></div>
       <div class="tile"><div class="k">Time in steps</div><div class="v" style="font-size:15px">${r.duration_ms >= 1000 ? (r.duration_ms / 1000).toFixed(1) + " s" : r.duration_ms + " ms"}</div></div></div>
     <div class="cap">${esc(judged)}. Framework: ${esc(r.framework)}. Recorded ${esc(fmtTime(r.created_at))}.</div>
-    <div class="cap">Lookups: ${r.search === "live" ? "live (answered by the model" + (r.lookups.some(l => l.source !== "model") ? ", with Wikipedia as reference" : "") + ")" : "local fact table"}.</div>
+    <div class="cap">Lookups: ${r.search === "live" ? "live (" + ([["wikidata", "Wikidata"], ["wikipedia+model", "Wikipedia + model"], ["model", "model knowledge"]].filter(x => r.lookups.some(l => l.source === x[0])).map(x => x[1]).join(", ") || "none answered") + ")" : "local fact table"}.</div>
     ${f ? `<div class="cap">Fault: ${f.applied ? `${chip(f.type, "sus")} applied at step ${f.step_no}` : `${chip(f.type)} requested${f.requested_step ? ` at step ${f.requested_step}` : ""}, <b>not applied</b>`}.${r.reference_run_id ? ` Fault-free reference: <a href="#/run/${esc(r.reference_run_id)}" style="color:var(--accent)">${esc(r.reference_run_id)}</a>.` : ""}</div>` : ""}
     <div class="cap">Diagnosis status: <b style="color:var(--text2)">${esc(cuDiagStatus())}</b></div>
     ${r.notes.map(n => `<div class="note warn">${esc(n)}</div>`).join("")}
@@ -772,7 +772,7 @@ function cuTraceBody() {
   const t = CU.trace; if (t.error) { el.innerHTML = `<div class="note bad">${esc(t.error)}</div>`; return; }
   const ms = Object.fromEntries((t.timing || []).map(x => [x.step_no, x])), sus = CU.diag ? CU.diag.suspects.map(s => s.step_no) : [];
   const look = (t.custom || {}).lookups || {};
-  const src = s => { const l = s.actor === "search_agent" && !s.error && look[s.input]; return l ? chip(l.source === "model" ? "source: model knowledge" : "source: Wikipedia (" + short(l.title || "", 40) + ") + model") : ""; };
+  const src = s => { const l = s.actor === "search_agent" && !s.error && look[s.input]; return l ? chip(l.source === "model" ? "source: model knowledge" : l.source === "wikidata" ? "source: Wikidata, " + short(l.title || "", 40) + (l.as_of ? ", as of " + l.as_of : "") : "source: Wikipedia (" + short(l.title || "", 40) + ") + model") : ""; };
   el.innerHTML = `<div class="cap" style="margin-top:10px">${t.steps.length} recorded steps. Open in replay for full inputs, editing and comparison.</div>` + t.steps.map(s => {
     const x = ms[s.step_no];
     return `<div class="step ${sus[0] === s.step_no ? "sus" : sus.includes(s.step_no) ? "sus2" : ""}" style="cursor:default"><div class="hd"><b>#${s.step_no} · ${esc(s.actor)}</b>

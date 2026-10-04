@@ -423,9 +423,9 @@ def test_custom_free_form_query_uses_reference_run(monkeypatch):
     assert normal["outcome"] == "success" and normal["custom"]["judged_by"] == "completed"
     assert normal["custom"]["expected"] is None and "fault" not in normal
     # a free-form query on a real model looks things up live, in full digits, and says where from
-    assert normal["custom"]["search"] == "live" and normal["steps"][1]["output"] == "France has 68200000 people."
+    assert normal["custom"]["search"] == "live" and normal["steps"][1]["output"] == "France has 68.2 million people."
     assert normal["custom"]["lookups"]["population of France"] == {"source": "model", "title": None}
-    assert tasks.parse_answer(normal["final_answer"]) == 116300000 and len(calls) == 2
+    assert tasks.parse_answer(normal["final_answer"]) == 116.3 and len(calls) == 2
     res = custom.record_custom(FREE, "groq:some-model", fault=custom.check_fault("wrong_number", None))
     run, ref = res["run"], res["reference"]
     assert len(calls) == 4                                  # the fault run reuses its reference run's lookups
@@ -449,6 +449,7 @@ def test_custom_live_search_sources_replay_and_isolation(monkeypatch):
                                                           "extract": "France has  68.2 million inhabitants."}}}}
     monkeypatch.setenv("BLACKBOX_WEB_SEARCH", "1")
     monkeypatch.setattr(custom, "_web_down_until", 0.0)
+    monkeypatch.setattr(custom, "wikidata", lambda q: None)     # this test is about the Wikipedia + model path
     monkeypatch.setattr(requests, "get", lambda url, **kw: Wiki())
     for framework in ("custom", "langgraph"):
         run = custom.record_custom(FREE, "groq:some-model", framework)["run"]
@@ -475,6 +476,63 @@ def test_custom_live_search_sources_replay_and_isolation(monkeypatch):
     assert tools.run_tool("search", "population of India") == (tools.NOT_FOUND, "empty_result")
     with pytest.raises(custom.CustomError):                    # mock models cannot look up names outside the table
         custom.record_custom("What is the combined population of India and China in millions?", "mock-large")
+
+
+def test_custom_wikidata_lookup_is_current_and_unit_aware(monkeypatch):
+    import custom
+    import requests
+    calls = _hosted_stub(monkeypatch)
+    Q = "http://www.wikidata.org/entity/"
+
+    def claim(amount, unit="1", year=None, rank="normal"):
+        c = {"rank": rank, "mainsnak": {"datavalue": {"value": {"amount": amount, "unit": unit}}}}
+        if year:
+            c["qualifiers"] = {"P585": [{"datavalue": {"value": {"time": f"+{year}-00-00T00:00:00Z"}}}]}
+        return c
+    ENT = {"Q142": {"labels": {"en": {"value": "France"}}, "claims": {
+               "P1082": [claim("+66000000", year=2015, rank="preferred"), claim("+68600000", year=2025),
+                         claim("+99", year=2030, rank="deprecated")],
+               "P2046": [claim("+643801", Q + "Q712226")]}},
+           "Q29": {"labels": {"en": {"value": "Spain"}}, "claims": {"P1082": [claim("+49100000", year=2025)]}},
+           "Q999": {"labels": {"en": {"value": "France (band)"}}, "claims": {}},
+           "Q3392": {"labels": {"en": {"value": "Nile"}}, "claims": {"P2043": [claim("+6650000", Q + "Q11573")]}}}
+    seen = []
+
+    class R:
+        def __init__(self, d): self.d = d
+        def raise_for_status(self): pass
+        def json(self): return self.d
+
+    def fake_get(url, params=None, **kw):
+        seen.append(params)
+        if params["action"] == "wbsearchentities":
+            hits = {"France": ["Q999", "Q142"], "Spain": ["Q29"], "Nile": ["Q3392"]}.get(params["search"], [])
+            return R({"search": [{"id": i} for i in hits]})
+        if params["action"] == "wbgetentities":
+            return R({"entities": {i: ENT[i] for i in params["ids"].split("|")}})
+        return R({"query": {"pages": {}}})                       # Wikipedia: nothing found
+    monkeypatch.setenv("BLACKBOX_WEB_SEARCH", "1")
+    monkeypatch.setattr(custom, "_web_down_until", 0.0)
+    monkeypatch.setattr(custom, "_wikidata_down_until", 0.0)
+    monkeypatch.setattr(requests, "get", fake_get)
+    # the latest dated, non-deprecated value wins; the first search hit without the property is skipped
+    assert custom.wikidata("population of France 2026") == {"label": "France", "noun": "population", "value": 68600000.0,
+                                                            "unit": "people", "year": "2025", "id": "Q142"}
+    assert custom.wikidata("land area of France")["value"] == 643801.0
+    assert custom.wikidata("length of the Nile river")["value"] == 6650.0          # metres -> kilometres
+    assert custom.wikidata("capital of France") is None and custom.wikidata("population of Atlantis") is None
+    run = custom.record_custom(FREE, "groq:some-model")["run"]                     # FREE asks "in millions"
+    assert run["steps"][1]["output"] == "France has a population of 68.6 million people." and not calls
+    assert run["custom"]["lookups"]["population of France"] == {"source": "wikidata", "title": "France (Q142)", "as_of": "2025"}
+    assert run["outcome"] == "success" and tasks.parse_answer(run["final_answer"]) == 117.7
+    assert custom.task_scale("total, in billions?") == (1e9, "billion") and custom.task_scale("in Spain") == (1.0, "")
+    assert custom.rescale("Spain has 48,100,000 people.", 1e6, "million") == "Spain has 48.1 million people."
+
+    def boom(url, **kw): raise requests.ConnectionError()
+    monkeypatch.setattr(requests, "get", boom)                    # no web at all -> the model alone, still in millions
+    run = custom.record_custom(FREE, "groq:some-model")["run"]
+    assert run["steps"][1]["output"] == "France has 68.2 million people." and run["custom"]["lookups"][
+        "population of France"]["source"] == "model" and tasks.parse_answer(run["final_answer"]) == 116.3
 
 
 def test_custom_validation(monkeypatch):
