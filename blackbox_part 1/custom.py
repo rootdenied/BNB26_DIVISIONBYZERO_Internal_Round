@@ -13,10 +13,24 @@ different is how the outcome is judged, because a free-text query has no built-i
 
 How the outcome was judged is saved in the run under `custom`, and replays of the run are
 judged the same way.
+
+Search in a custom run (saved as `custom.search`, and reused by replays):
+
+  fact_table  the query is one of the built-in question shapes about facts in the local table
+              (and always for the mock models): the normal local search tool.
+  live        any other query on a real model: each search is answered in one sentence by the
+              run's own model, grounded on a Wikipedia extract when Wikipedia is reachable
+              (BLACKBOX_WEB_SEARCH=0 turns the web part off). Numbers are written out in full
+              digits so the lookups of one run can be combined. Runs that are not custom never
+              use live search.
 """
 from __future__ import annotations
 
+import contextlib
+import contextvars
 import os
+import re
+import time
 
 import inject
 import llm as llm_mod
@@ -34,6 +48,118 @@ FAULT_HELP = {
     "skipped_step": "A tool call returns an empty result with no error.",
     "wrong_tool": "The plan sends the first lookup to the calculator instead of search.",
 }
+
+
+LOOKUP = """### LOOKUP
+You are the search tool of a research agent. Answer the lookup below in ONE short sentence.
+The sentence must contain exactly one number: the value asked for, written in full digits with
+no words such as thousand, million or billion (write 1430000000, not 1.43 billion), followed
+by its unit. Do not mention years, dates or any other number.
+Use the reference text when it contains the answer; otherwise use your own knowledge.
+If you do not know, reply exactly: No results found.
+
+Lookup: {query}
+Reference text: {reference}
+"""
+WIKI_URL = "https://en.wikipedia.org/w/api.php"
+_web_down_until = 0.0                    # after a failed request the web is skipped for a minute
+_live: contextvars.ContextVar = contextvars.ContextVar("blackbox_live_search", default=None)
+
+
+def web_enabled() -> bool:
+    return os.environ.get("BLACKBOX_WEB_SEARCH", "1").strip().lower() not in ("0", "false", "off", "no")
+
+
+def wikipedia(query: str, timeout: float = 4.0) -> tuple[str, str] | None:
+    """(page title, intro text) of the best Wikipedia matches for a lookup, or None. Never raises."""
+    global _web_down_until
+    if not web_enabled() or time.time() < _web_down_until:
+        return None
+    import requests
+    try:
+        r = requests.get(os.environ.get("BLACKBOX_WIKI_URL", WIKI_URL), timeout=timeout,
+                         headers={"User-Agent": "BlackBoxFlightRecorder/1.0 (agent debugging demo)"},
+                         params={"action": "query", "format": "json", "generator": "search", "gsrsearch": query,
+                                 "gsrlimit": 2, "prop": "extracts", "exintro": 1, "explaintext": 1, "exlimit": 2})
+        r.raise_for_status()
+        pages = sorted(((r.json().get("query") or {}).get("pages") or {}).values(), key=lambda p: p.get("index", 99))
+    except Exception:  # noqa: BLE001  offline, blocked or a bad reply: fall back to the model alone
+        _web_down_until = time.time() + 60
+        return None
+    pages = [p for p in pages if (p.get("extract") or "").strip()]
+    if not pages:
+        return None
+    text = "\n".join(f"{p.get('title', '')}: {' '.join(p['extract'].split())[:1200]}" for p in pages)
+    return str(pages[0].get("title", "")), text
+
+
+_SCALE = {"thousand": 1e3, "million": 1e6, "billion": 1e9, "trillion": 1e12}
+_SCALED = re.compile(r"(\d[\d,]*\.?\d*)\s*(thousand|million|billion|trillion)\b", re.I)
+
+
+def full_digits(text: str) -> str:
+    """'1.43 billion' -> '1430000000', for models that ignore the full-digits instruction."""
+    def repl(m):
+        try:
+            return tasks.fmt_value(round(float(m.group(1).replace(",", "").rstrip(".")) * _SCALE[m.group(2).lower()], 4))
+        except ValueError:
+            return m.group(0)
+    return _SCALED.sub(repl, text)
+
+
+def _key(query: str) -> str:
+    return " ".join(query.lower().split())
+
+
+def live_search(query: str, ctx: dict) -> str:
+    """One lookup of a live custom run: a one-sentence fact from the run's model (+ Wikipedia)."""
+    hit = ctx["cache"].get(_key(query))
+    if hit:                                  # a fault run repeats the lookups of its reference run
+        ctx["lookups"][query] = hit[1]
+        return hit[0]
+    ref = wikipedia(query)
+    r = ctx["llm"].complete(LOOKUP.format(query=query, reference=ref[1] if ref else "(none available)"))
+    text = full_digits(next((ln.strip() for ln in (r.text or "").splitlines() if ln.strip()), "")[:300])
+    if r.error or not any(ch.isdigit() for ch in text) or "no results found" in text.lower():
+        raise tools.ToolError("empty_result")
+    ctx["lookups"][query] = {"source": "wikipedia+model", "title": ref[0]} if ref else {"source": "model", "title": None}
+    return text
+
+
+@contextlib.contextmanager
+def live_scope(llm, cache: dict | None = None):
+    """While open, the search tool of the agent running in this context does live lookups."""
+    ctx = {"llm": llm, "cache": dict(cache or {}), "lookups": {}}
+    token = _live.set(ctx)
+    try:
+        yield ctx
+    finally:
+        _live.reset(token)
+
+
+def search_scope(run: dict, llm):
+    """The search a replay of `run` must use: live for a live custom run, else the normal tool."""
+    if (run.get("custom") or {}).get("search") == "live":
+        return live_scope(llm)
+    return contextlib.nullcontext({"lookups": {}})
+
+
+def lookup_cache(run: dict) -> dict:
+    """query -> (output, source) for the searches of a live run that found something."""
+    seen = (run.get("custom") or {}).get("lookups") or {}
+    return {_key(s["input"]): (s["output"], seen[s["input"]]) for s in run["steps"]
+            if s["actor"] == "search_agent" and not s.get("error") and s["input"] in seen}
+
+
+if not getattr(tools.TOOLS["search"], "_blackbox_custom", False):
+    _local_search = tools.TOOLS["search"]
+
+    def _search(query: str) -> str:
+        ctx = _live.get()
+        return _local_search(query) if ctx is None else live_search(query, ctx)
+
+    _search._blackbox_custom = True
+    tools.TOOLS["search"] = _search      # identical to the local tool outside a live custom run
 
 
 class CustomError(ValueError):
@@ -110,6 +236,9 @@ def check_model(model: str, query: str) -> None:
             raise CustomError("The mock models only understand the four built-in question shapes (combined population, "
                               "how much taller, how many times larger an area, average river length). "
                               "Pick a real model for a free-form query.")
+        if expected_from_facts(query) is None:
+            raise CustomError("The mock models can only look things up in the local fact table, and this query names "
+                              "something that is not in it. Pick a real model, or use names from the fact table.")
         return
     prefix, sep, name = model.partition(":")
     if sep and prefix in llm_mod.PROVIDERS:
@@ -138,13 +267,16 @@ def check_fault(fault_type: str | None, fault_step: int | None) -> dict:
     return {"type": fault_type, "step_no": int(fault_step) if fault_step else None, "seed": 1}
 
 
-def _execute(query, model, framework, fault, expected, tolerance, meta):
-    agent = get_agent(framework, llm_mod.get_llm(model))
+def _execute(query, model, framework, fault, expected, tolerance, meta, live=False, cache=None):
+    llm = llm_mod.get_llm(model)
+    agent = get_agent(framework, llm)
     rec = Recorder(framework, model.removeprefix("ollama:"), query, None, fault=fault)
-    answer = agent.run(query, rec)
+    with (live_scope(llm, cache) if live else contextlib.nullcontext({"lookups": {}})) as ctx:
+        answer = agent.run(query, rec)
     outcome, how = judge(answer, rec.steps, expected, tolerance)
     run = rec.finish(answer, outcome)
-    run["custom"] = {**meta, "expected": expected, "tolerance": tolerance, "judged_by": how}
+    run["custom"] = {**meta, "expected": expected, "tolerance": tolerance, "judged_by": how,
+                     "search": "live" if live else "fact_table", "lookups": ctx["lookups"]}
     store.save_run(run)
     return run
 
@@ -162,25 +294,28 @@ def record_custom(query: str, model: str, framework: str = "custom", fault: dict
     if framework not in FRAMEWORKS:
         raise CustomError(f"Unknown framework `{framework}`. Supported: {', '.join(FRAMEWORKS)}.")
     check_model(model, query)
+    facts = expected_from_facts(query)
+    live = facts is None and not model.startswith("mock")     # see "Search in a custom run" above
     source = "user" if expected is not None else None
-    if expected is None:
-        expected = expected_from_facts(query)
-        source = "fact_table" if expected is not None else None
+    if expected is None and facts is not None:
+        expected, source = facts, "fact_table"
     reference = None
     if fault and expected is None:
         # nothing to compare a broken run with: record the same query without the fault first
         reference = _execute(query, model, framework, None, None, tolerance,
-                             {"mode": "reference", "expected_source": None})
+                             {"mode": "reference", "expected_source": None}, live)
         value = tasks.parse_answer(reference.get("final_answer") or "")
         if reference["outcome"] == "success" and value is not None:
             expected, source = value, "reference_run"
     meta = {"mode": "fault" if fault else "normal", "expected_source": source,
             "reference_run_id": reference["run_id"] if reference else None}
-    return {"run": _execute(query, model, framework, fault, expected, tolerance, meta), "reference": reference}
+    cache = lookup_cache(reference) if reference and live else None
+    return {"run": _execute(query, model, framework, fault, expected, tolerance, meta, live, cache),
+            "reference": reference}
 
 
 def knowledge() -> list[dict]:
-    """What the built-in search tool can look up (it is a local fact table, not the web)."""
+    """What the local fact table holds (used for the built-in question shapes and the mock models)."""
     units = {"population": "millions of people", "area": "thousand square kilometers", "height": "meters", "length": "kilometers"}
     return [{"attribute": a, "unit": units.get(a, ""), "entities": sorted(ents)} for a, ents in tasks.CORPUS.items()]
 

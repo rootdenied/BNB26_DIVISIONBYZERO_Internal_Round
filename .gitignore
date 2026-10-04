@@ -1,3 +1,17 @@
-part2/data/
+# Python
 __pycache__/
 *.pyc
+.pytest_cache/
+.venv/
+venv/
+
+# generated data (rebuilt by the commands in README.md)
+part2/data/
+
+# secrets and local files
+.env
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

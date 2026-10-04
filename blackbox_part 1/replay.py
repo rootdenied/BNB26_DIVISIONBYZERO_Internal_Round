@@ -173,12 +173,18 @@ def replay_once(run: dict, step_no: int, edit: dict, llm=None, model: str | None
     dirty = later if branch else {step_no} | dependents(run, step_no)
     ctx = ReplayCtx(original=run, edit_step=step_no, edit=edit, dirty=dirty, checkpoint=branch)
     use_model = model or run["model"]
-    agent = get_agent(run["framework"], llm or llm_mod.get_llm(use_model))
+    use_llm = llm or llm_mod.get_llm(use_model)
+    agent = get_agent(run["framework"], use_llm)
     rec = Recorder(run["framework"], use_model, run["task"], task.task_id if task else None, replay=ctx)
-    answer = agent.run(run["task"], rec)
+    if run.get("custom"):      # a custom run is replayed with the search it was recorded with
+        import custom
+        with custom.search_scope(run, use_llm) as scope:
+            answer = agent.run(run["task"], rec)
+    else:
+        answer = agent.run(run["task"], rec)
     new = rec.finish(answer, _judge(run, task, answer, rec.steps))
     if run.get("custom"):
-        new["custom"] = run["custom"]
+        new["custom"] = {**run["custom"], "lookups": {**(run["custom"].get("lookups") or {}), **scope["lookups"]}}
     reused = [s for s, st in rec.status.items() if st == "reused"]
     rerun = [s for s, st in rec.status.items() if st in ("rerun", "edited", "fresh")]
     full = sum(s["tokens"] for s in new["steps"])

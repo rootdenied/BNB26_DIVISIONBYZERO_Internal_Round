@@ -15,6 +15,8 @@ PART1 = ROOT / "blackbox_part 1"
 
 if not (ROOT / "part2" / "model.txt").exists():
     sys.exit("No trained model. Run: python -m part2.make_data, then python -m part2.train")
+if not (PART1 / "data" / "blackbox.db").exists():     # fresh clone: the run database is not in git
+    subprocess.run([sys.executable, "scripts/load_runs.py"], cwd=PART1, check=False)
 procs = [
     subprocess.Popen([sys.executable, "-m", "uvicorn", "part2.diagnose_api:app", "--port", "8001"], cwd=ROOT),
     subprocess.Popen([sys.executable, "start.py"], cwd=PART1),

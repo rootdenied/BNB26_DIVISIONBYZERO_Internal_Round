@@ -380,9 +380,16 @@ def _hosted_stub(monkeypatch):
             assert FREE in p                               # the user's query reaches the model unchanged
             return Resp('{"steps": [{"tool": "search", "query": "population of France"}, '
                         '{"tool": "search", "query": "population of Spain"}], "expression": "{0}+{1}"}')
+        if p.startswith("### LOOKUP"):                     # live search: the model answers each lookup itself
+            calls.append(p)
+            if "Atlantis" in p:
+                return Resp("No results found.")
+            return Resp("France has 68200000 people." if "France" in p else "Spain has 48100000 people.")
         return Resp(mock.complete(p).text)
+    calls = []
     monkeypatch.setattr(requests, "post", fake_post)
     monkeypatch.setenv("GROQ_API_KEY", "k")
+    return calls
 
 
 def test_custom_normal_run_fact_table_query():
@@ -411,18 +418,63 @@ def test_custom_fault_run_is_explicit_and_replayable():
 
 def test_custom_free_form_query_uses_reference_run(monkeypatch):
     import custom
-    _hosted_stub(monkeypatch)
+    calls = _hosted_stub(monkeypatch)
     normal = custom.record_custom(FREE, "groq:some-model")["run"]
     assert normal["outcome"] == "success" and normal["custom"]["judged_by"] == "completed"
     assert normal["custom"]["expected"] is None and "fault" not in normal
+    # a free-form query on a real model looks things up live, in full digits, and says where from
+    assert normal["custom"]["search"] == "live" and normal["steps"][1]["output"] == "France has 68200000 people."
+    assert normal["custom"]["lookups"]["population of France"] == {"source": "model", "title": None}
+    assert tasks.parse_answer(normal["final_answer"]) == 116300000 and len(calls) == 2
     res = custom.record_custom(FREE, "groq:some-model", fault=custom.check_fault("wrong_number", None))
     run, ref = res["run"], res["reference"]
+    assert len(calls) == 4                                  # the fault run reuses its reference run's lookups
     assert ref["custom"]["mode"] == "reference" and "fault" not in ref and ref["outcome"] == "success"
     assert run["custom"]["expected_source"] == "reference_run" and run["custom"]["reference_run_id"] == ref["run_id"]
     assert run["outcome"] == "fail" and run["fault"]["applied"] and run["faulty_step"] == run["fault"]["step_no"]
     assert replay.smart_replay(run["run_id"], run["faulty_step"], {"rerun": True}, n_runs=1)["outcome_flipped"]
     given = custom.record_custom(FREE, "groq:some-model", expected=999.0)["run"]   # user-supplied expected answer wins
     assert given["outcome"] == "fail" and given["custom"]["expected_source"] == "user"
+
+
+def test_custom_live_search_sources_replay_and_isolation(monkeypatch):
+    import custom
+    import requests
+    import tools
+    calls = _hosted_stub(monkeypatch)
+
+    class Wiki:
+        def raise_for_status(self): pass
+        def json(self): return {"query": {"pages": {"1": {"index": 1, "title": "Demographics of France",
+                                                          "extract": "France has  68.2 million inhabitants."}}}}
+    monkeypatch.setenv("BLACKBOX_WEB_SEARCH", "1")
+    monkeypatch.setattr(custom, "_web_down_until", 0.0)
+    monkeypatch.setattr(requests, "get", lambda url, **kw: Wiki())
+    for framework in ("custom", "langgraph"):
+        run = custom.record_custom(FREE, "groq:some-model", framework)["run"]
+        assert run["outcome"] == "success" and run["custom"]["lookups"]["population of France"] == {
+            "source": "wikipedia+model", "title": "Demographics of France"}
+    assert "Demographics of France: France has 68.2 million inhabitants." in calls[0]
+
+    def offline(url, **kw): raise requests.ConnectionError()
+    monkeypatch.setattr(requests, "get", offline)              # Wikipedia unreachable -> the model alone, no crash
+    run = custom.record_custom(FREE, "groq:some-model")["run"]
+    assert run["outcome"] == "success" and run["custom"]["lookups"]["population of Spain"]["source"] == "model"
+    assert custom.wikipedia("anything") is None and custom._web_down_until > 0
+    # replaying a search step of a live run looks it up live again; other steps are reused
+    n = len(calls)
+    res = replay.smart_replay(run["run_id"], 2, {"rerun": True}, n_runs=1)
+    assert len(calls) == n + 1 and res["new_run"]["outcome"] == "success" and res["new_run"]["custom"]["search"] == "live"
+    # a lookup the model cannot answer is an empty search, and the run fails without crashing
+    monkeypatch.setattr(custom, "LOOKUP", custom.LOOKUP + "Atlantis")
+    lost = custom.record_custom(FREE, "groq:some-model")["run"]
+    assert lost["outcome"] == "fail" and lost["steps"][1]["error"] == "empty_result" and custom.lookups_missed(lost) == 2
+    assert custom.full_digits("about 1.43 billion people and 146 million") == "about 1430000000 people and 146000000"
+    # outside a live custom run the search tool is the unchanged local fact table
+    assert tools.run_tool("search", "population of France") == ("France has a population of 68.2 million people.", None)
+    assert tools.run_tool("search", "population of India") == (tools.NOT_FOUND, "empty_result")
+    with pytest.raises(custom.CustomError):                    # mock models cannot look up names outside the table
+        custom.record_custom("What is the combined population of India and China in millions?", "mock-large")
 
 
 def test_custom_validation(monkeypatch):

@@ -17,7 +17,7 @@ Full API spec: [`contract/api.md`](contract/api.md).
 cd "C:\Users\Atharva Wadekar\OneDrive\Documents\Hackathon\blackbox"
 python -m venv .venv; .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-python -m pytest -q tests          # 40 tests, offline, a few seconds
+python -m pytest -q tests          # 41 tests, offline, a few seconds
 ```
 
 ## Test Part 1 alone (no Part 2, no Ollama)
@@ -73,8 +73,17 @@ with diagnosis, replay and verify.
   number and no step error, which does not mean the answer is correct).
 * **Verify:** `POST /api/custom/verify` replays each suspect in order with a plain retry through the
   existing replay and reports the first one that flips the run.
-* **Limits:** the search tool is the local fact table in `tasks.py`, not the web. The mock models only
-  understand the four built-in question shapes. The diagnosis backend ranks steps; it does not name a fault type.
+* **Lookups** (saved in the run as `custom.search`, and reused by replays):
+  * `live`: any free-form query on a real model. Each search is answered in one sentence by the model you
+    picked, with a Wikipedia extract as reference when Wikipedia is reachable, and numbers written out in
+    full digits so the lookups of one run can be combined. `custom.lookups` records the source of each one
+    (`wikipedia+model` or `model`). These are not verified facts. `BLACKBOX_WEB_SEARCH=0` turns the
+    Wikipedia part off. A fault run reuses the lookups of its fault-free reference run.
+  * `fact_table`: the built-in question shapes about names in `tasks.py`, and always for the mock models.
+  Runs that are not custom never use live lookups; `tools.search` is unchanged for them.
+* **Limits:** the agent answers with a number, so ask for something that can be worked out from numbers.
+  The mock models only run the four built-in question shapes with names from the fact table. The diagnosis
+  backend ranks steps; it does not name a fault type.
 
 Endpoints (in `ui_api.py`): `GET /api/custom/meta`, `POST /api/custom/run`, `GET /api/custom/runs/{id}`,
 `POST /api/custom/verify`. Logic: `custom.py`. Every run now also saves `timing` (start time and duration per step).
@@ -115,6 +124,8 @@ inline as `"run": {...}`.
 | `ui_api.py` + `ui/index.html` | Dashboard on port 8501 (default UI): activity feed of runs, filters, overview charts, run detail with timeline, top-3 suspects, explanation, edit/rewind/branch, side-by-side diff, savings meter, "save confirmed cause", and a Results page for `part2/results.md`. Additive only, same clients and store as `app.py` |
 | `app.py` | Old Streamlit UI, still works via `python start.py --streamlit`: timeline, top-3 suspects, edit/rewind panel, side-by-side view, savings meter, "save confirmed cause" |
 | `inject.py` | Fault-injection flag `fault={"step_no": 4, "type": "empty_search"}` |
+| `custom.py` | Custom runs: model discovery, validation, live lookups, outcome judging, `record_custom` |
+| `scripts/load_runs.py` | Rebuilds `data/blackbox.db` from `runs/*.json` on a fresh clone (the database is not in git) |
 | `tasks.py`, `tools.py` | 25 demo tasks over a local fact corpus, search and calculator tools. Demo tasks: `t01`, `t16`. |
 | `llm.py` | `MockLLM` (offline, deterministic) and `OllamaLLM` |
 | `mocks/` | Stand-ins for Part 2: `/diagnose` heuristics and server, verify-loop client |

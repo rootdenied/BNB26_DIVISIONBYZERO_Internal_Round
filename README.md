@@ -10,10 +10,19 @@ Ports: replay API 8000 (Part 1), diagnose API 8001 (Part 2), UI 8501 (Part 1).
 
 ## Setup (once)
 
+Python 3.10 or newer.
+
 ```powershell
-pip install -r part2/requirements.txt
-pip install -r "blackbox_part 1/requirements.txt"
+git clone https://github.com/rootdenied/BNB26_DIVISIONBYZERO_Internal_Round.git
+cd BNB26_DIVISIONBYZERO_Internal_Round
+python -m venv .venv; .venv\Scripts\Activate.ps1      # optional
+pip install -r requirements.txt
 ```
+
+`requirements.txt` is the two parts' lists combined (`part2/requirements.txt`,
+`blackbox_part 1/requirements.txt`). The 668 recorded runs are in git as JSON
+(`blackbox_part 1/runs/`); the SQLite database is not, so the first `python run_all.py` rebuilds it
+from those files (about a second).
 
 ## Run the demo
 
@@ -24,6 +33,8 @@ python run_all.py          # diagnose :8001 + replay :8000 + UI :8501
 Open http://localhost:8501. It opens on Activity: every recorded run as a feed, filters on the left
 (outcome, status, injected fault, model, framework) and overview charts on the right. Click a run for
 its step timeline, top suspects, explanation and edit-and-replay. "Results" shows `part2/results.md`.
+"Custom" runs a query you type on a model you pick (a local Ollama model or a hosted one), with an
+optional injected fault, then diagnoses, replays and verifies it; see `blackbox_part 1/README.md`.
 The old Streamlit UI is still there: `cd "blackbox_part 1"; python start.py --streamlit`.
 
 Open a run. The "Source" caption under "Top suspects" must say `diagnose API` (the Diagnose API dot
@@ -70,7 +81,7 @@ Real `mistral` and `langgraph` runs are never trained on, so they become the uns
 ## Tests
 
 ```powershell
-cd "blackbox_part 1"; python -m pytest -q tests      # Part 1, 40 tests, offline
+cd "blackbox_part 1"; python -m pytest -q tests      # Part 1, 41 tests, offline
 ```
 
 See `part2/README.md` and `blackbox_part 1/README.md` for details, and `part2/results.md` for the numbers.

@@ -264,7 +264,7 @@ def custom_meta():
     """What a custom run can use right now: runnable models, frameworks, fault types, searchable facts."""
     return {**custom.supported_models(), "frameworks": ["custom", "langgraph"],
             "fault_types": [{"type": t, "help": custom.FAULT_HELP.get(t, "")} for t in inject.FAULT_TYPES],
-            "knowledge": custom.knowledge(), "max_query": custom.MAX_QUERY, "timeout_s": CUSTOM_TIMEOUT,
+            "knowledge": custom.knowledge(), "web_search": custom.web_enabled(), "max_query": custom.MAX_QUERY, "timeout_s": CUSTOM_TIMEOUT,
             "examples": [t.text for t in tasks.TASKS if t.task_id in ("t01", "t11", "t16", "t23")]}
 
 
@@ -287,9 +287,20 @@ def _custom_summary(run: dict, reference: Optional[dict] = None) -> dict:
     elif f and run["outcome"] == "success":
         notes.append("The fault was applied but the run still succeeded, so there is no failure to diagnose.")
     missed = custom.lookups_missed(run)
-    if missed:
-        notes.append(f"{missed} search step(s) found nothing. The search tool is a local fact table, not the web; "
-                     "see \"What the search tool knows\".")
+    live = c.get("search") == "live"
+    if not any(s["kind"] == "tool_call" for s in run["steps"]):
+        notes.append("The model did not produce a usable plan, so nothing was looked up. Ask for something that "
+                     "can be worked out from numbers, for example a total, a difference or an average.")
+    if missed and live:
+        notes.append(f"{missed} lookup(s) came back empty: the model had no answer for them (or its call failed).")
+    elif missed:
+        notes.append(f"{missed} search step(s) found nothing. This run used the local fact table; "
+                     "see \"How lookups work\".")
+    if live:
+        notes.append("Lookups in this run were answered by the model"
+                     + (", with Wikipedia text as reference where a page was found" if any(
+                         v.get("source") != "model" for v in (c.get("lookups") or {}).values()) else " from its own knowledge")
+                     + ". They are not verified facts.")
     if c.get("judged_by") == "completed":
         notes.append("No expected answer was available, so the outcome only says whether the run finished with a "
                      "number and no step error. It does not say the answer is correct.")
@@ -308,6 +319,8 @@ def _custom_summary(run: dict, reference: Optional[dict] = None) -> dict:
         "n_steps": len(run["steps"]), "tokens": sum(s["tokens"] for s in run["steps"]),
         "duration_ms": round(sum(t["ms"] for t in run.get("timing") or []), 1),
         "created_at": run.get("created_at"), "notes": notes,
+        "search": c.get("search") or "fact_table",
+        "lookups": [{"query": q, **v} for q, v in (c.get("lookups") or {}).items()],
     }
 
 

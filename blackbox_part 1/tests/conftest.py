@@ -12,3 +12,4 @@ os.environ["BLACKBOX_REPLAYS_DIR"] = os.path.join(_tmp, "replays")
 os.environ["BLACKBOX_CONFIRMED_DIR"] = os.path.join(_tmp, "confirmed")
 os.environ["DIAGNOSE_URL"] = "http://127.0.0.1:9"   # nothing there -> UI uses mock fallback
 os.environ["REPLAY_URL"] = "http://127.0.0.1:9"
+os.environ["BLACKBOX_WEB_SEARCH"] = "0"         # tests never touch the network

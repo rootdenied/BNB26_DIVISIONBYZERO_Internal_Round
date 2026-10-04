@@ -1,0 +1,6 @@
+# Same line endings in git on every OS (run.json files are written by Python on Windows)
+* text=auto
+*.png binary
+*.db binary
+part2/model.txt text eol=lf
+part2/model_baseline.txt text eol=lf
